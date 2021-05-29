@@ -6,6 +6,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#define CONFIG_FILENAME "econf"
+
 int link_dir(char *dest, char *src);
 int link_files(char *dest, char *src);
 int rm(char *path);
@@ -118,7 +120,7 @@ int link_dotfiles(char *dest, char *src)
 
 int main(int argc, char *argv[])
 {
-	char *home;
+	FILE *config;
 
 	if (argc > 2 && !strcmp(argv[1], "-C")) {
 		chdir(argv[2]);
@@ -132,6 +134,23 @@ int main(int argc, char *argv[])
 	printf("%s\n", exp_result.we_wordv[0]);
 	wordfree(&exp_result);
 	*/
+
+	if (!access(CONFIG_FILENAME, F_OK)) {
+		config = fopen(CONFIG_FILENAME, "r");
+	} else {
+		fprintf(stdout, "config file missing, creating config file\n");
+		config = fopen(CONFIG_FILENAME, "w+");
+		fclose(config);
+		return 1;
+	}
+
+	
+	char c = fgetc(config);
+	while (c != EOF)
+	{
+		printf ("%c", c);
+		c = fgetc(config);
+	}
 
 	link_dotfiles("/home/jd", "zsh");
 	link_dir("/home/jd/.config", "dunst");
