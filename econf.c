@@ -51,6 +51,12 @@ int link_dir(char *dest, char *src)
 
 	char cwd[1024];
 
+	if(access(src, F_OK)) {
+		fprintf(stderr, "cannot open directory: %s\n", src);
+		return 1;
+	}
+
+
 	getcwd(cwd, 1024);
 	src_dir = malloc(1024);
 	snprintf(src_dir, 1024, "%s/%s", cwd, src);
@@ -77,7 +83,7 @@ int link_dotfiles(char *dest, char *src)
 
 	src_dir = opendir(src);
 	if (src_dir == NULL){
-		fprintf(stderr, "(link_dotfiles(%s, %s)), cannot open %s\n", dest, src, src);
+		fprintf(stderr, "cannot open directory: %s\n", src);
 		return 1;
 	}
 	while ((entry = readdir(src_dir)) != NULL) {
@@ -120,10 +126,12 @@ int main(int argc, char *argv[])
 
 	/* TODO: implement config file */
 	/* TODO: call this on each field of config file */
+	/*
 	wordexp_t exp_result;
 	wordexp("~/", &exp_result, 0);
 	printf("%s\n", exp_result.we_wordv[0]);
 	wordfree(&exp_result);
+	*/
 
 	link_dotfiles("/home/jd", "zsh");
 	link_dir("/home/jd/.config", "dunst");
