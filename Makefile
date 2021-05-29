@@ -1,5 +1,7 @@
 .POSIX:
 
+PREFIX = ~/.local/
+
 SRC = econf.c
 OBJ = econf.o
 
@@ -12,6 +14,9 @@ econf: ${OBJ}
 
 ${OBJ}:
 	${CC} -c ${SRC} ${CFLAGS}
+
+install:
+	cp -f econf ${PREFIX}/bin
 
 clean:
 	rm -f ${OBJ} econf
