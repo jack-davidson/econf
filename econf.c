@@ -98,7 +98,7 @@ int link_dotfiles(char *dest, char *src)
 			char cwd[1024];
 
 			dest_filename = malloc(1024);
-			snprintf(dest_filename, 1024, "%s/%s/%s", dest, ".", entry->d_name);
+			snprintf(dest_filename, 1024, "%s/%s%s", dest, ".", entry->d_name);
 
 			src_filename = malloc(1024);
 			getcwd(cwd, 1024);
