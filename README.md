@@ -21,6 +21,11 @@ different machines. You can have a directory alsa-lt0 and alsa-dt0 where the hos
 and dt0 respectively. If you put sys at the end of a directive, the directory with your hostname
 postfix will be linked to the target directory.
 
+### `run`
+Run a command:
+
+`run command arg arg ...`
+
 ### comments
 A comment can exist in its own line or at the end of a line. A line starting with `#` is a comment.
 A line may have a trailing comment as well.
@@ -82,5 +87,5 @@ files   alsa   ~/      sys
 files   tmux ~
 files   zsh  ~
 
-hook sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+run sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 ```
