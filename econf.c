@@ -1,3 +1,11 @@
+/* See LICENSE file for copyright and license details.
+ *
+ * econf
+ *
+ * Automated deployment of configuration.
+ *
+ */
+
 #define  _XOPEN_SOURCE 700
 #include <dirent.h>
 #include <stdio.h>
