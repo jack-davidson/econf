@@ -2,6 +2,9 @@
 Automatically deploy configuration files.
 
 ## configuration
+Within a configuration directory (usually a git repository), a file called
+`econf` must be present. `econf` shall contain comments starting with `#`
+and configuration directives.
 
 symlink directory `source_directory` to `target_directory`
 
