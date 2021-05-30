@@ -58,7 +58,6 @@ int link_dir(char *dest, char *src)
 		return 1;
 	}
 
-
 	getcwd(cwd, 1024);
 	src_dir = malloc(1024);
 	snprintf(src_dir, 1024, "%s/%s", cwd, src);
@@ -67,7 +66,6 @@ int link_dir(char *dest, char *src)
 	snprintf(dest_dir, 1024, "%s/%s", dest, src);
 	rm(dest_dir);
 
-	/* rm(dest_dir); */
 	if(!symlink(src_dir, dest_dir))
 		fprintf(stdout, "%s -> %s\n", src_dir, dest_dir);
 	else
@@ -126,15 +124,6 @@ int main(int argc, char *argv[])
 		chdir(argv[2]);
 	}
 
-	/* TODO: implement config file */
-	/* TODO: call this on each field of config file */
-	/*
-	wordexp_t exp_result;
-	wordexp("~/", &exp_result, 0);
-	printf("%s\n", exp_result.we_wordv[0]);
-	wordfree(&exp_result);
-	*/
-
 	if (!access(CONFIG_FILENAME, F_OK)) {
 		config = fopen(CONFIG_FILENAME, "r");
 	} else {
@@ -151,11 +140,13 @@ int main(int argc, char *argv[])
 		char line[3][64];
 		char *token;
 
+		/* strip trailing newline */
 		buffer[strcspn(buffer, "\n")] = 0;
 		line_index = 0;
 
 		token = strtok(buffer, " ");
 		while (token != NULL) {
+			/* expand ~, ., *, etc for filenames */
 			if (line_index > 0) {
 				wordexp_t exp_result;
 				wordexp(token, &exp_result, 0);
