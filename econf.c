@@ -182,6 +182,8 @@ int parse_config(FILE *config)
 				memmove(token, token+1, strlen(token));
 				snprintf(new_token, 86, "%s%s", getenv("HOME"), token);
 				strcpy(line_tokens[token_index], new_token);
+			} else if (token[0] == '#') {
+				break;
 			} else {
 				strcpy(line_tokens[token_index], token);
 			}

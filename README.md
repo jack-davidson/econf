@@ -22,7 +22,13 @@ and dt0 respectively. If you put sys at the end of a directive, the directory wi
 postfix will be linked to the target directory.
 
 ### comments
-comments may only exist on their own line, a line starting with a `#` is a comment.
+A comment can exist in its own line or at the end of a line. A line starting with `#` is a comment.
+A line may have a trailing comment as well.
+
+```
+# line comment
+example # trailing comment
+```
 
 ### example
 
