@@ -189,7 +189,7 @@ int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 		if (!strcmp(line_tokens[0], "files")) {
 			link_dotfiles(line_tokens[2], line_tokens[1]);
 		}
-		if (!strcmp(line_tokens[0], "hook")) {
+		if (!strcmp(line_tokens[0], "run")) {
 			memset(command, 0, COMMAND_SIZE);
 			for (i = 1; i < token_index; i++) {
 				strcat(command, line_tokens[i]);
