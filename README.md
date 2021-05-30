@@ -15,6 +15,18 @@ symlink files in `source_directory` to `target_directory` as hidden files
 `files source_directory target_directory`
 
 ### example
+
+```
+files:
+
+config_repo/
+        dunst/
+            dunstrc
+        zsh/
+            zshrc
+            zprofile
+```
+
 ```
 # symlink dir dunst to ~/.config
 dir dunst ~/.config
