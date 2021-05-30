@@ -6,7 +6,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define VERSION "0.1"
+#define VERSION "0.3"
 
 #define LINE_BUFFER_SIZE 1024
 
