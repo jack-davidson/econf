@@ -2,17 +2,27 @@
 Automatically deploy configuration files.
 
 ## configuration
-Within a configuration directory (usually a git repository), a file called
-`econf` must be present. `econf` shall contain comments starting with `#`
-and configuration directives.
+Econf reads a configuration file called `econf` in your configuration repository.
 
-symlink directory `source_directory` to `target_directory`
+### `dir`
+`dir`: link a directory to another directory:
 
-`dir source_directory target_directory`
+`dir directory another_directory`
 
-symlink files in `source_directory` to `target_directory` as hidden files
+### `files`
+`files`: link files in directory to another directory as hidden files
 
-`files source_directory target_directory`
+`files directory another_directory`
+
+### `sys` option
+At the end of a configuration command, if you put `sys`, the hostname of your machine
+will get appended to the source directory. This is useful for having different configs for
+different machines. You can have a directory alsa-lt0 and alsa-dt0 where the hostnames are lt0
+and dt0 respectively. If you put sys at the end of a directive, the directory with your hostname
+postfix will be linked to the target directory.
+
+### comments
+comments may only exist on their own line, a line starting with a `#` is a comment.
 
 ### example
 
@@ -20,16 +30,51 @@ symlink files in `source_directory` to `target_directory` as hidden files
 files:
 
 config_repo/
-        dunst/
-            dunstrc
-        zsh/
-            zshrc
-            zprofile
+    qutebrowser/
+        ...
+    fontconfig/
+        ...
+    nvim/
+        ...
+    zathura/
+        ...
+    dunst/
+        ...
+    spotifyd/
+        ...
+    spotify-tui/
+        ...
+    xinit-lt0/ # hostname postfix
+        xinitrc
+    xinit-dt0/ # hostname postfix
+        xinitrc
+    alsa-lt0/ # hostname postfix
+        asoundrc
+    alsa-dt0/ # hostname postfix
+        asoundrc
+    tmux/
+        tmux.conf
+    zsh/
+        zshrc
+        zsh_profile
 ```
 
 ```
-# symlink dir dunst to ~/.config
-dir dunst ~/.config
-# symlink files in zsh to ~
-files zsh ~
+dir     qutebrowser    ~/.config
+dir     fontconfig     ~/.config
+dir     nvim           ~/.config
+dir     zathura        ~/.config
+dir     dunst          ~/.config
+dir     spotifyd       ~/.config
+dir     spotify-tui    ~/.config
+
+# hostname postfix
+files   xinit  ~/      sys
+# hostname postfix
+files   alsa   ~/      sys
+
+files   tmux ~
+files   zsh  ~
+
+hook sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 ```
