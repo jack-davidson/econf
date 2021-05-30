@@ -6,11 +6,14 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define CONFIG_FILENAME "econf"
+#define VERSION "0.1"
 
 int link_dir(char *dest, char *src);
 int link_files(char *dest, char *src);
 int rm(char *path);
+
+void usage();
+void version();
 
 int rm(char *path)
 {
@@ -116,20 +119,31 @@ int link_dotfiles(char *dest, char *src)
 	return 0;
 }
 
+void usage() {
+	printf("usage: econf [-c config_file] [-C working_directory] [-vh]\n");
+}
+
+void version() {
+	printf("econf-%s\n", VERSION);
+}
+
 int main(int argc, char *argv[])
 {
 	FILE *config;
+	char config_filename[64] = "econf";
 
-	if (argc > 2 && !strcmp(argv[1], "-C")) {
+	if (argc > 2 && !strcmp(argv[1], "-C"))
 		chdir(argv[2]);
-	}
+	if (argc > 1 && !strcmp(argv[1], "-h"))
+		usage();
+	if (argc > 1 && !strcmp(argv[1], "-v"))
+		version();
 
-	if (!access(CONFIG_FILENAME, F_OK)) {
-		config = fopen(CONFIG_FILENAME, "r");
+	if (!access(config_filename, F_OK)) {
+		config = fopen(config_filename, "r");
 	} else {
-		fprintf(stdout, "config file missing, creating config file\n");
-		config = fopen(CONFIG_FILENAME, "w+");
-		fclose(config);
+		fprintf(stdout, "config file not found\n");
+		usage();
 		return 1;
 	}
 
