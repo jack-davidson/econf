@@ -144,15 +144,36 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	
-	char c = fgetc(config);
-	while (c != EOF)
-	{
-		printf ("%c", c);
-		c = fgetc(config);
-	}
+	char buffer[256];
+	while (fgets(buffer, 256, config) != NULL) {
 
-	link_dotfiles("/home/jd", "zsh");
-	link_dir("/home/jd/.config", "dunst");
+		int line_index;
+		char line[3][64];
+		char *token;
+
+		buffer[strcspn(buffer, "\n")] = 0;
+		line_index = 0;
+
+		token = strtok(buffer, " ");
+		while (token != NULL) {
+			if (line_index > 0) {
+				wordexp_t exp_result;
+				wordexp(token, &exp_result, 0);
+				strcpy(line[line_index], exp_result.we_wordv[0]);
+				wordfree(&exp_result);
+			} else {
+				strcpy(line[line_index], token);
+			}
+			line_index++;
+			token = strtok(NULL, " ");
+		}
+
+		if (!strcmp(line[0], "dir")) {
+			link_dir(line[2], line[1]);
+		} else if (!strcmp(line[0], "files")) {
+			link_dotfiles(line[2], line[1]);
+		}
+	}
+	fclose(config);
 	return 0;
 }
