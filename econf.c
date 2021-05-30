@@ -135,6 +135,8 @@ int main(int argc, char *argv[])
 
 	char buffer[256];
 	while (fgets(buffer, 256, config) != NULL) {
+		if (buffer[0] == '#')
+			fgets(buffer, 256, config);
 
 		int line_index;
 		char line[3][64];
