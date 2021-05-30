@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 			fgets(buffer, 256, config);
 
 		int line_index;
-		char line[3][64];
+		char line[4][64];
 		char *token;
 
 		/* strip trailing newline */
@@ -173,6 +173,15 @@ int main(int argc, char *argv[])
 			}
 			line_index++;
 			token = strtok(NULL, " ");
+		}
+
+		if (line_index == 4) {
+			if (!strcmp(line[3], "sys")) {
+				char hostname[64];
+				gethostname(hostname, 64);
+				strcat(line[1], "-");
+				strcat(line[1], hostname);
+			}
 		}
 
 		if (!strcmp(line[0], "dir")) {
