@@ -191,7 +191,6 @@ int parse_config(FILE *config)
 
 		if (token_index > 3) {
 			if (!strcmp(line_tokens[3], "sys")) {
-				printf("sys: %s", line_tokens[1]);
 				char hostname[64];
 				gethostname(hostname, 64);
 				strcat(line_tokens[1], "-");
@@ -205,6 +204,14 @@ int parse_config(FILE *config)
 			}
 			if (!strcmp(line_tokens[0], "files")) {
 				link_dotfiles(line_tokens[2], line_tokens[1]);
+			}
+			if (!strcmp(line_tokens[0], "hook")) {
+				char command[256] = {0};
+				for (int i = 1; i < token_index; i++) {
+					strcat(command, line_tokens[i]);
+					strcat(command, " ");
+				}
+				system(command);
 			}
 		}
 
