@@ -8,9 +8,12 @@
 
 #define VERSION "0.1"
 
+#define LINE_BUFFER_SIZE 1024
+
 int link_dir(char *dest, char *src);
 int link_files(char *dest, char *src);
 int rm(char *path);
+int parse_args(int argc, char *argv[]);
 
 void usage();
 void version();
@@ -119,77 +122,112 @@ int link_dotfiles(char *dest, char *src)
 	return 0;
 }
 
-void usage() {
+void usage()
+{
 	printf("usage: econf [-c config_file] [-C working_directory] [-vh]\n");
 }
 
-void version() {
+void version()
+{
 	printf("econf-%s\n", VERSION);
 }
 
-int main(int argc, char *argv[])
-{
-	FILE *config;
-	char config_filename[64] = "econf";
-
+int parse_args(int argc, char *argv[]) {
 	if (argc > 2 && !strcmp(argv[1], "-C"))
 		chdir(argv[2]);
 	if (argc > 1 && !strcmp(argv[1], "-h"))
 		usage();
 	if (argc > 1 && !strcmp(argv[1], "-v"))
 		version();
+}
+
+FILE *load_config(char *config_filename)
+{
+	FILE *config;
 
 	if (!access(config_filename, F_OK)) {
 		config = fopen(config_filename, "r");
+		return config;
 	} else {
 		fprintf(stdout, "config file not found\n");
 		usage();
+		return NULL;
+	}
+}
+
+int parse_config(FILE *config)
+{
+	char line_buffer[LINE_BUFFER_SIZE];
+
+	while ((fgets(line_buffer, LINE_BUFFER_SIZE, config) != NULL)) {
+		char line_tokens[64][86];
+		char *token;
+		int token_index;
+
+		/* ignore lines starting with newline or comment symbol */
+		switch (line_buffer[0]) {
+			case '\n':
+				continue;
+			case '#':
+				fgets(line_buffer, LINE_BUFFER_SIZE, config);
+				continue;
+		}
+		line_buffer[strcspn(line_buffer, "\n")] = 0;
+
+		token_index = 0;
+		token = strtok(line_buffer, " ");
+		while (token != NULL) {
+			if (token[0] == '~') {
+				char new_token[86];
+				memmove(token, token+1, strlen(token));
+				snprintf(new_token, 86, "%s%s", getenv("HOME"), token);
+				strcpy(line_tokens[token_index], new_token);
+			} else {
+				strcpy(line_tokens[token_index], token);
+			}
+			token = strtok(NULL, " ");
+			token_index++;
+		}
+
+		if (token_index > 3) {
+			if (!strcmp(line_tokens[3], "sys")) {
+				printf("sys: %s", line_tokens[1]);
+				char hostname[64];
+				gethostname(hostname, 64);
+				strcat(line_tokens[1], "-");
+				strcat(line_tokens[1], hostname);
+			}
+		}
+
+		if (token_index >= 2) {
+			if (!strcmp(line_tokens[0], "dir")) {
+				link_dir(line_tokens[2], line_tokens[1]);
+			}
+			if (!strcmp(line_tokens[0], "files")) {
+				link_dotfiles(line_tokens[2], line_tokens[1]);
+			}
+		}
+
+		memset(line_buffer, 0, LINE_BUFFER_SIZE);
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	FILE *config;
+	int err;
+
+	parse_args(argc, argv);
+
+	if ((config = load_config("econf")) == NULL) {
 		return 1;
 	}
 
-	char buffer[256];
-	while (fgets(buffer, 256, config) != NULL) {
-		if (buffer[0] == '#')
-			fgets(buffer, 256, config);
-
-		int line_index;
-		char line[4][64];
-		char *token;
-
-		/* strip trailing newline */
-		buffer[strcspn(buffer, "\n")] = 0;
-		line_index = 0;
-
-		token = strtok(buffer, " ");
-		while (token != NULL) {
-			/* expand ~, ., *, etc for filenames */
-			if (line_index > 0) {
-				wordexp_t exp_result;
-				wordexp(token, &exp_result, 0);
-				strcpy(line[line_index], exp_result.we_wordv[0]);
-				wordfree(&exp_result);
-			} else {
-				strcpy(line[line_index], token);
-			}
-			line_index++;
-			token = strtok(NULL, " ");
-		}
-
-		if (line_index == 4) {
-			if (!strcmp(line[3], "sys")) {
-				char hostname[64];
-				gethostname(hostname, 64);
-				strcat(line[1], "-");
-				strcat(line[1], hostname);
-			}
-		}
-
-		if (!strcmp(line[0], "dir")) {
-			link_dir(line[2], line[1]);
-		} else if (!strcmp(line[0], "files")) {
-			link_dotfiles(line[2], line[1]);
-		}
+	if ((err = parse_config(config)) != 0) {
+		printf("failed to parse config, err %i", err);
+		return err;
 	}
+
 	fclose(config);
 	return 0;
 }
