@@ -29,7 +29,7 @@
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
 int parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index);
-int parseargs(int argc, char *argv[]);
+int parseargs(int argc, char **argv);
 int linkfiles(char *dest, char *src);
 int linkdir(char *dest, char *src);
 int lexconfig(FILE *config);
@@ -39,6 +39,7 @@ int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
 char *strncomb(char *s, size_t n, ...);
+int main(int argc, char **argv);
 
 char *strncomb(char *s, size_t n, ...)
 {
@@ -203,7 +204,7 @@ int install(char *script)
 
 /* parse main program arguments */
 int
-parseargs(int argc, char *argv[]) {
+parseargs(int argc, char **argv) {
 	if (argc > 2 && !strcmp(argv[1], "-C"))
 		chdir(argv[2]);
 	if (argc > 1 && !strcmp(argv[1], "-h"))
@@ -316,7 +317,7 @@ lexconfig(FILE *config)
 }
 
 int
-main(int argc, char *argv[])
+main(int argc, char **argv)
 {
 	FILE *config;
 	int err;
