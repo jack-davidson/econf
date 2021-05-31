@@ -26,21 +26,18 @@
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
-int link_dir(char *dest, char *src);
-int link_files(char *dest, char *src);
-
+int parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index);
+int parseargs(int argc, char *argv[]);
+int linkfiles(char *dest, char *src);
+int linkdir(char *dest, char *src);
+int lexconfig(FILE *config);
 int rm(char *path);
-
-int parse_args(int argc, char *argv[]);
-
-int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index);
-int lex_config(FILE *config);
-
-void usage();
 void version();
+void usage();
 
 /* recursively delete a directory or file */
-int rm(char *path)
+int
+rm(char *path)
 {
 	char new_path[PATH_SIZE];
 	struct stat path_stat;
@@ -72,7 +69,8 @@ int rm(char *path)
 }
 
 /* link a directory src to another directory dest */
-int link_dir(char *dest, char *src)
+int
+linkdir(char *dest, char *src)
 {
 	char dest_dir[PATH_SIZE];
 	char src_dir[PATH_SIZE];
@@ -101,7 +99,8 @@ int link_dir(char *dest, char *src)
 }
 
 /* link all files within a directory src to another directory dest as hidden files */
-int link_dotfiles(char *dest, char *src)
+int
+link_dotfiles(char *dest, char *src)
 {
 	char dest_filename[PATH_SIZE];
 	char src_filename[PATH_SIZE];
@@ -141,18 +140,21 @@ int link_dotfiles(char *dest, char *src)
 	return 0;
 }
 
-void usage()
+void
+usage()
 {
 	printf("usage: econf [-c config_file] [-C working_directory] [-vh]\n");
 }
 
-void version()
+void
+version()
 {
 	printf("econf-%s\n", VERSION);
 }
 
 /* parse main program arguments */
-int parse_args(int argc, char *argv[]) {
+int
+parseargs(int argc, char *argv[]) {
 	if (argc > 2 && !strcmp(argv[1], "-C"))
 		chdir(argv[2]);
 	if (argc > 1 && !strcmp(argv[1], "-h"))
@@ -163,7 +165,8 @@ int parse_args(int argc, char *argv[]) {
 }
 
 /* load config file, handle errors and return file descriptor */
-FILE *load_config(char *config_filename)
+FILE *
+load_config(char *config_filename)
 {
 	FILE *config;
 
@@ -175,8 +178,9 @@ FILE *load_config(char *config_filename)
 	}
 }
 
-/* parse tokens of config line, called by lex_config for each line of config file */
-int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
+/* parse tokens of config line, called by lexconfig for each line of config file */
+int
+parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 {
 	char hostname[HOSTNAME_SIZE];
 	char command[COMMAND_SIZE];
@@ -192,7 +196,7 @@ int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 
 	if (token_index >= 2) {
 		if (!strcmp(line_tokens[0], "dir")) {
-			link_dir(line_tokens[2], line_tokens[1]);
+			linkdir(line_tokens[2], line_tokens[1]);
 		}
 		if (!strcmp(line_tokens[0], "files")) {
 			link_dotfiles(line_tokens[2], line_tokens[1]);
@@ -209,8 +213,9 @@ int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 	return 0;
 }
 
-/* tokenize lines of config file and call parse_config() on each line */
-int lex_config(FILE *config)
+/* tokenize lines of config file and call parseconfig() on each line */
+int
+lexconfig(FILE *config)
 {
 	char line_tokens[TOKENS][TOKEN_SIZE];
 	char line_buffer[LINE_BUFFER_SIZE];
@@ -252,7 +257,7 @@ int lex_config(FILE *config)
 			token_index++;
 		}
 
-		if ((err = (parse_config(line_tokens, token_index))) < 0) {
+		if ((err = (parseconfig(line_tokens, token_index))) < 0) {
 			printf("failed to execute line %i in config (error code %i)\n",
 			       line, err);
 			return err;
@@ -264,12 +269,13 @@ int lex_config(FILE *config)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	FILE *config;
 	int err;
 
-	if ((err = parse_args(argc, argv)) != 0) {
+	if ((err = parseargs(argc, argv)) != 0) {
 		printf("failed to parse arguments (error code %i)\n", err);
 		usage();
 	}
@@ -279,7 +285,7 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-	if ((err = lex_config(config)) != 0) {
+	if ((err = lexconfig(config)) != 0) {
 		printf("failed to lex config (error code %i)\n", err);
 		return err;
 	}
