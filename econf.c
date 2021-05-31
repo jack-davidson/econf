@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <wordexp.h>
+#include <stdarg.h>
 
 #define DOT_OR_DOTDOT(name) strncmp(name, "..", 2) & strncmp(name, ".", 1)
 
@@ -37,6 +38,23 @@ int install(char *script);
 int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
+char *strncomb(char *s, size_t n, ...);
+
+char *strncomb(char *s, size_t n, ...)
+{
+	va_list args;
+	char *arg;
+
+	va_start(args, n);
+	arg = va_arg(args, char *);
+
+	while (arg != (char *)NULL) {
+		strncat(s, arg, n);
+		arg = va_arg(args, char *);
+	}
+	va_end(args);
+	return s;
+}
 
 /* recursively delete a directory or file */
 int
@@ -59,9 +77,7 @@ rm(char *path)
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (DOT_OR_DOTDOT(entry->d_name)) {
-				strncat(new_path, path, PATH_SIZE - 1);
-				strncat(new_path, "/", PATH_SIZE - 1);
-				strncat(new_path, entry->d_name, PATH_SIZE - 1);
+				strncomb(new_path, PATH_SIZE - 1, path, "/", entry->d_name, NULL);
 				rm(new_path);
 			}
 		}
@@ -86,13 +102,8 @@ linkdir(char *dest, char *src)
 
 	getcwd(cwd, PATH_SIZE);
 
-	strncat(src_dir, cwd, PATH_SIZE - 1);
-	strncat(src_dir, "/", PATH_SIZE - 1);
-	strncat(src_dir, src, PATH_SIZE - 1);
-
-	strncat(dest_dir, dest, PATH_SIZE - 1);
-	strncat(dest_dir, "/", PATH_SIZE - 1);
-	strncat(dest_dir, src, PATH_SIZE - 1);
+	strncomb(src_dir, PATH_SIZE - 1, cwd, "/", src, NULL);
+	strncomb(dest_dir, PATH_SIZE - 1, dest, "/", src, NULL);
 
 	rm(dest_dir);
 
@@ -130,15 +141,8 @@ link_dotfiles(char *dest, char *src)
 			memset(dest_filename, 0, PATH_SIZE);
 			memset(src_filename, 0, PATH_SIZE);
 
-			strncat(dest_filename, dest, PATH_SIZE - 1);
-			strncat(dest_filename, "/.", PATH_SIZE - 1);
-			strncat(dest_filename, entry->d_name, PATH_SIZE - 1);
-
-			strncat(src_filename, cwd, PATH_SIZE - 1);
-			strncat(src_filename, "/", PATH_SIZE - 1);
-			strncat(src_filename, src, PATH_SIZE - 1);
-			strncat(src_filename, "/", PATH_SIZE - 1);
-			strncat(src_filename, entry->d_name, PATH_SIZE - 1);
+			strncomb(dest_filename, PATH_SIZE - 1, dest, "/.", entry->d_name, NULL);
+			strncomb(src_filename, PATH_SIZE - 1, cwd, "/", src, "/", entry->d_name, NULL);
 
 			rm(dest_filename);
 			if (!symlink(src_filename, dest_filename))
@@ -183,9 +187,7 @@ int install(char *script)
 	char confirm[10];
 
 	getcwd(cwd, PATH_SIZE);
-	strncat(script_path, cwd, PATH_SIZE - 1);
-	strncat(script_path, "/install/", PATH_SIZE - 1);
-	strncat(script_path, script, PATH_SIZE - 1);
+	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
 	printf("execute install script %s? (Potentially Dangerous) [y/N] ", script);
 	scanf("%c", confirm);
@@ -238,8 +240,7 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 	if (token_index > 3) {
 		if (!strcmp(line_tokens[3], "sys")) {
 			gethostname(hostname, HOSTNAME_SIZE);
-			strncat(line_tokens[1], "-", TOKEN_SIZE - 1);
-			strncat(line_tokens[1], hostname, TOKEN_SIZE - 1);
+			strncomb(line_tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
 		}
 	}
 
@@ -253,8 +254,7 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 		if (!strcmp(line_tokens[0], "run")) {
 			memset(command, 0, COMMAND_SIZE);
 			for (i = 1; i < token_index; i++) {
-				strncat(command, line_tokens[i], COMMAND_SIZE - 1);
-				strncat(command, " ", COMMAND_SIZE - 1);
+				strncomb(command, COMMAND_SIZE - 1, line_tokens[i], " ", NULL);
 			}
 			system(command);
 		}
@@ -292,8 +292,7 @@ lexconfig(FILE *config)
 			if (token[0] == '~') {
 				memset(expanded_token, 0, TOKEN_SIZE);
 				memmove(token, token+1, strlen(token));
-				strncat(expanded_token, getenv("HOME"), TOKEN_SIZE - 1);
-				strncat(expanded_token, token, TOKEN_SIZE - 1);
+				strncomb(expanded_token, TOKEN_SIZE - 1, getenv("HOME"), token, NULL);
 				strncpy(line_tokens[token_index], expanded_token, TOKEN_SIZE);
 			} else if (token[0] == '#') {
 				break;
