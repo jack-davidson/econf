@@ -37,39 +37,40 @@ example # trailing comment
 
 ### example
 
+Directory structure:
 ```
-files:
-
-config_repo/
-    qutebrowser/
-        ...
-    fontconfig/
-        ...
-    nvim/
-        ...
-    zathura/
-        ...
-    dunst/
-        ...
-    spotifyd/
-        ...
-    spotify-tui/
-        ...
-    xinit-lt0/ # hostname postfix
-        xinitrc
-    xinit-dt0/ # hostname postfix
-        xinitrc
-    alsa-lt0/ # hostname postfix
-        asoundrc
-    alsa-dt0/ # hostname postfix
-        asoundrc
-    tmux/
-        tmux.conf
-    zsh/
-        zshrc
-        zsh_profile
+$ ls
+    config_repo/
+        qutebrowser/
+            ...
+        fontconfig/
+            ...
+        nvim/
+            ...
+        zathura/
+            ...
+        dunst/
+            ...
+        spotifyd/
+            ...
+        spotify-tui/
+            ...
+        xinit-lt0/ # hostname postfix
+            xinitrc
+        xinit-dt0/ # hostname postfix
+            xinitrc
+        alsa-lt0/ # hostname postfix
+            asoundrc
+        alsa-dt0/ # hostname postfix
+            asoundrc
+        tmux/
+            tmux.conf
+        zsh/
+            zshrc
+            zsh_profile
 ```
 
+econf config file
 ```
 dir     qutebrowser    ~/.config
 dir     fontconfig     ~/.config
