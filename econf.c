@@ -7,6 +7,7 @@
  */
 
 #define  _XOPEN_SOURCE 700
+#include <ctype.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +34,7 @@ int linkdir(char *dest, char *src);
 int lexconfig(FILE *config);
 int rm(char *path);
 int install(char *script);
+int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
 
@@ -153,17 +155,32 @@ version()
 	printf("econf-%s\n", VERSION);
 }
 
+int strtolower(char *s, char *str, size_t size)
+{
+	int i;
+	for (i = 0; i < size; i++) {
+		*(s + i) = tolower(*(str + i));
+	}
+	return 1;
+}
+
 int install(char *script)
 {
 	char cwd[PATH_SIZE];
 	char script_path[PATH_SIZE];
+	char confirm[10];
 
 	getcwd(cwd, PATH_SIZE);
 	snprintf(script_path, PATH_SIZE, "%s/install/%s", cwd, script);
 
-	printf("executing install script %s\n", script);
-	if (execl(script_path, "", NULL) < 0) {
-		printf("failed to execute install script %s\n", script);
+	printf("execute install script %s? (Potentially Dangerous) [y/N] ", script);
+	scanf("%c", confirm);
+	strtolower(confirm, confirm, sizeof(confirm));
+	if (!strcmp(confirm, "y")) {
+		printf("executing install script %s\n", script);
+		if (execl(script_path, "", NULL) < 0) {
+			printf("failed to execute install script %s\n", script);
+		}
 	}
 	return 0;
 }
