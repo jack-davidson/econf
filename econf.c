@@ -28,12 +28,13 @@
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
-int parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index);
+int parseline(char line_tokens[TOKENS][TOKEN_SIZE], int token_index);
 int parseargs(int argc, char **argv);
 int linkfiles(char *dest, char *src);
 int linkdir(char *dest, char *src);
-int lexconfig(FILE *config);
+int readconfig(FILE *config);
 int rm(char *path);
+FILE *loadfile(char *file);
 int install(char *script);
 int strtolower(char *s, char *str, size_t size);
 void version();
@@ -58,8 +59,7 @@ char *strncomb(char *s, size_t n, ...)
 }
 
 /* recursively delete a directory or file */
-int
-rm(char *path)
+int rm(char *path)
 {
 	char new_path[PATH_SIZE];
 	struct stat path_stat;
@@ -74,7 +74,7 @@ rm(char *path)
 		src_dir = opendir(path);
 		if (src_dir == NULL){
 			fprintf(stderr, "cannot open %s\n", path);
-			return 1;
+			return -1;
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (DOT_OR_DOTDOT(entry->d_name)) {
@@ -89,8 +89,7 @@ rm(char *path)
 }
 
 /* link a directory src to another directory dest */
-int
-linkdir(char *dest, char *src)
+int linkdir(char *dest, char *src)
 {
 	char dest_dir[PATH_SIZE] = {0};
 	char src_dir[PATH_SIZE] = {0};
@@ -119,8 +118,7 @@ linkdir(char *dest, char *src)
 }
 
 /* link all files within a directory src to another directory dest as hidden files */
-int
-link_dotfiles(char *dest, char *src)
+int link_dotfiles(char *dest, char *src)
 {
 	char dest_filename[PATH_SIZE];
 	char src_filename[PATH_SIZE];
@@ -131,7 +129,7 @@ link_dotfiles(char *dest, char *src)
 	src_dir = opendir(src);
 	if (src_dir == NULL){
 		fprintf(stderr, "cannot open directory: %s\n", src);
-		return 1;
+		return -1;
 	}
 
 	while ((entry = readdir(src_dir)) != NULL) {
@@ -160,14 +158,12 @@ link_dotfiles(char *dest, char *src)
 	return 0;
 }
 
-void
-usage()
+void usage()
 {
 	printf("usage: econf [-vh] [-C working_directory] \n");
 }
 
-void
-version()
+void version()
 {
 	printf("econf-%s\n", VERSION);
 }
@@ -178,7 +174,7 @@ int strtolower(char *s, char *str, size_t size)
 	for (i = 0; i < size; i++) {
 		*(s + i) = tolower(*(str + i));
 	}
-	return 1;
+	return -1;
 }
 
 int install(char *script)
@@ -203,17 +199,18 @@ int install(char *script)
 }
 
 /* parse main program arguments */
-int
-parseargs(int argc, char **argv) {
+int parseargs(int argc, char **argv) {
 	int option;
 
 	while ((option = getopt(argc, argv, "vhC:")) != -1) {
 	switch (option) {
 		case 'v':
 			version();
+			exit(0);
 			break;
 		case 'h':
 			usage();
+			exit(0);
 			break;
 		case 'C':
 			chdir(optarg);
@@ -229,21 +226,19 @@ parseargs(int argc, char **argv) {
 }
 
 /* load config file, handle errors and return file descriptor */
-FILE *
-loadconfig(char *config_filename)
+FILE * loadfile(char *file)
 {
-	FILE *config;
+	FILE *fd;
 
-	if (!access(config_filename, F_OK)) {
-		config = fopen(config_filename, "r");
-		return config;
+	if (!access(file, F_OK)) {
+		fd = fopen(file, "r");
+		return fd;
 	}
 	return NULL;
 }
 
-/* parse tokens of config line, called by lexconfig for each line of config file */
-int
-parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
+/* parse tokens of config line, called by readconfig for each line of config file */
+int parseline(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 {
 	char hostname[HOSTNAME_SIZE];
 	char command[COMMAND_SIZE];
@@ -276,9 +271,8 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 	return 0;
 }
 
-/* tokenize lines of config file and call parseconfig() on each line */
-int
-lexconfig(FILE *config)
+/* tokenize lines of config file and call parseline() on each line */
+int readconfig(FILE *config)
 {
 	char line_tokens[TOKENS][TOKEN_SIZE];
 	char line_buffer[LINE_BUFFER_SIZE];
@@ -317,8 +311,8 @@ lexconfig(FILE *config)
 			token_index++;
 		}
 
-		if ((err = (parseconfig(line_tokens, token_index))) < 0) {
-			printf("failed to execute line %i in config (error code %i)\n",
+		if ((err = (parseline(line_tokens, token_index))) < 0) {
+			printf("failed to parse line %i in config (error code %i)\n",
 			       line, err);
 			return err;
 		}
@@ -329,23 +323,22 @@ lexconfig(FILE *config)
 	return 0;
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	FILE *config;
 	int err;
 
-	if ((err = parseargs(argc, argv)) != 0) {
+	if ((err = parseargs(argc, argv)) < 0) {
 		printf("failed to parse arguments (error code %i)\n", err);
 		usage();
 	}
 
-	if ((config = loadconfig("econf")) == NULL) {
+	if ((config = loadfile("econf")) == NULL) {
 		printf("failed to load config file\n");
 		usage();
 	}
 
-	if ((err = lexconfig(config)) != 0) {
+	if ((err = readconfig(config)) < 0) {
 		printf("failed to lex config (error code %i)\n", err);
 		return err;
 	}
