@@ -190,10 +190,10 @@ int install(char *script)
 	getcwd(cwd, PATH_SIZE);
 	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
-	printf("execute install script %s? (Potentially Dangerous) [y/N] ", script);
+	printf("install %s? [Y/n] ", script);
 	scanf("%c", confirm);
 	strtolower(confirm, confirm, sizeof(confirm));
-	if (!strcmp(confirm, "y")) {
+	if (strcmp(confirm, "n")) {
 		printf("executing install script %s\n", script);
 		if (execl(script_path, "", NULL) < 0) {
 			printf("failed to execute install script %s\n", script);
@@ -251,6 +251,9 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 		}
 		if (!strcmp(line_tokens[0], "files")) {
 			link_dotfiles(line_tokens[2], line_tokens[1]);
+		}
+		if (!strcmp(line_tokens[0], "install")) {
+			install(line_tokens[1]);
 		}
 		if (!strcmp(line_tokens[0], "run")) {
 			memset(command, 0, COMMAND_SIZE);
