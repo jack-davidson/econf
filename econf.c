@@ -19,8 +19,8 @@
 
 #define VERSION "0.3"
 
-#define PATH_SIZE	 1024 /* maximum supported path size */
-#define LINE_BUFFER_SIZE 1024 /* maximum length of line in config file */
+#define PATH_SIZE	 512  /* maximum supported path size */
+#define LINE_BUFFER_SIZE 512  /* maximum length of line in config file */
 #define TOKEN_SIZE	 256  /* maximum length of a config token */
 #define TOKENS		 128  /* maximum allowed config tokens */
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
@@ -32,6 +32,7 @@ int linkfiles(char *dest, char *src);
 int linkdir(char *dest, char *src);
 int lexconfig(FILE *config);
 int rm(char *path);
+int install(char *script);
 void version();
 void usage();
 
@@ -152,6 +153,21 @@ version()
 	printf("econf-%s\n", VERSION);
 }
 
+int install(char *script)
+{
+	char cwd[PATH_SIZE];
+	char script_path[PATH_SIZE];
+
+	getcwd(cwd, PATH_SIZE);
+	snprintf(script_path, PATH_SIZE, "%s/install/%s", cwd, script);
+
+	printf("executing install script %s\n", script);
+	if (execl(script_path, "", NULL) < 0) {
+		printf("failed to execute install script %s\n", script);
+	}
+	return 0;
+}
+
 /* parse main program arguments */
 int
 parseargs(int argc, char *argv[]) {
@@ -161,12 +177,14 @@ parseargs(int argc, char *argv[]) {
 		usage();
 	if (argc > 1 && !strcmp(argv[1], "-v"))
 		version();
+	if (argc > 2 && !strcmp(argv[1], "install"))
+		install(argv[2]);
 	return 0;
 }
 
 /* load config file, handle errors and return file descriptor */
 FILE *
-load_config(char *config_filename)
+loadconfig(char *config_filename)
 {
 	FILE *config;
 
@@ -280,7 +298,7 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	if ((config = load_config("econf")) == NULL) {
+	if ((config = loadconfig("econf")) == NULL) {
 		printf("failed to load config file");
 		usage();
 	}
