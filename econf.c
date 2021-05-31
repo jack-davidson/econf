@@ -42,10 +42,10 @@ void version();
 /* recursively delete a directory or file */
 int rm(char *path)
 {
+	char new_path[PATH_SIZE];
 	struct stat path_stat;
 	struct dirent *entry;
 	DIR *src_dir;
-	char new_path[PATH_SIZE];
 	int is_dir;
 
 	lstat(path, &path_stat);
@@ -74,8 +74,8 @@ int rm(char *path)
 /* link a directory src to another directory dest */
 int link_dir(char *dest, char *src)
 {
-	char src_dir[PATH_SIZE];
 	char dest_dir[PATH_SIZE];
+	char src_dir[PATH_SIZE];
 	char cwd[PATH_SIZE];
 
 	if(access(src, F_OK)) {
@@ -103,11 +103,11 @@ int link_dir(char *dest, char *src)
 /* link all files within a directory src to another directory dest as hidden files */
 int link_dotfiles(char *dest, char *src)
 {
-	DIR *src_dir;
-	struct dirent *entry;
 	char dest_filename[PATH_SIZE];
 	char src_filename[PATH_SIZE];
+	struct dirent *entry;
 	char cwd[PATH_SIZE];
+	DIR *src_dir;
 
 	src_dir = opendir(src);
 	if (src_dir == NULL){
@@ -212,8 +212,8 @@ int parse_config(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 /* tokenize lines of config file and call parse_config() on each line */
 int lex_config(FILE *config)
 {
-	char line_buffer[LINE_BUFFER_SIZE];
 	char line_tokens[TOKENS][TOKEN_SIZE];
+	char line_buffer[LINE_BUFFER_SIZE];
 	char new_token[TOKEN_SIZE];
 	int token_index;
 	char *token;
