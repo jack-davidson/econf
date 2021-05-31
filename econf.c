@@ -163,7 +163,7 @@ link_dotfiles(char *dest, char *src)
 void
 usage()
 {
-	printf("usage: econf [-c config_file] [-C working_directory] [-vh]\n");
+	printf("usage: econf [-vh] [-C working_directory] \n");
 }
 
 void
@@ -205,14 +205,26 @@ int install(char *script)
 /* parse main program arguments */
 int
 parseargs(int argc, char **argv) {
-	if (argc > 2 && !strcmp(argv[1], "-C"))
-		chdir(argv[2]);
-	if (argc > 1 && !strcmp(argv[1], "-h"))
-		usage();
-	if (argc > 1 && !strcmp(argv[1], "-v"))
-		version();
-	if (argc > 2 && !strcmp(argv[1], "install"))
-		install(argv[2]);
+	int option;
+
+	while ((option = getopt(argc, argv, "vhC:")) != -1) {
+	switch (option) {
+		case 'v':
+			version();
+			break;
+		case 'h':
+			usage();
+			break;
+		case 'C':
+			chdir(optarg);
+			break;
+		default:
+			break;
+	}
+	}
+
+	if (argc > optind && !strcmp(argv[optind], "install"))
+		install(argv[optind + 1]);
 	return 0;
 }
 
@@ -225,9 +237,8 @@ loadconfig(char *config_filename)
 	if (!access(config_filename, F_OK)) {
 		config = fopen(config_filename, "r");
 		return config;
-	} else {
-		return NULL;
 	}
+	return NULL;
 }
 
 /* parse tokens of config line, called by lexconfig for each line of config file */
@@ -330,7 +341,7 @@ main(int argc, char **argv)
 	}
 
 	if ((config = loadconfig("econf")) == NULL) {
-		printf("failed to load config file");
+		printf("failed to load config file\n");
 		usage();
 	}
 
