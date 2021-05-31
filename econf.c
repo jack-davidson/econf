@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <wordexp.h>
 
-#define DOT_OR_DOTDOT(name) strcmp(name, "..") || strcmp(name, ".")
+#define DOT_OR_DOTDOT(name) strncmp(name, "..", 2) & strncmp(name, ".", 1)
 
 #define VERSION "0.3"
 
@@ -59,9 +59,9 @@ rm(char *path)
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (DOT_OR_DOTDOT(entry->d_name)) {
-				snprintf(new_path, PATH_SIZE,
-					 "%s/%s", path,
-					 entry->d_name);
+				strncat(new_path, path, PATH_SIZE - 1);
+				strncat(new_path, "/", PATH_SIZE - 1);
+				strncat(new_path, entry->d_name, PATH_SIZE - 1);
 				rm(new_path);
 			}
 		}
@@ -75,8 +75,8 @@ rm(char *path)
 int
 linkdir(char *dest, char *src)
 {
-	char dest_dir[PATH_SIZE];
-	char src_dir[PATH_SIZE];
+	char dest_dir[PATH_SIZE] = {0};
+	char src_dir[PATH_SIZE] = {0};
 	char cwd[PATH_SIZE];
 
 	if(access(src, F_OK)) {
@@ -85,10 +85,15 @@ linkdir(char *dest, char *src)
 	}
 
 	getcwd(cwd, PATH_SIZE);
-	snprintf(src_dir, PATH_SIZE,
-		 "%s/%s", cwd, src);
-	snprintf(dest_dir, PATH_SIZE,
-		 "%s/%s", dest, src);
+
+	strncat(src_dir, cwd, PATH_SIZE - 1);
+	strncat(src_dir, "/", PATH_SIZE - 1);
+	strncat(src_dir, src, PATH_SIZE - 1);
+
+	strncat(dest_dir, dest, PATH_SIZE - 1);
+	strncat(dest_dir, "/", PATH_SIZE - 1);
+	strncat(dest_dir, src, PATH_SIZE - 1);
+
 	rm(dest_dir);
 
 	if(!symlink(src_dir, dest_dir))
@@ -119,15 +124,22 @@ link_dotfiles(char *dest, char *src)
 
 	while ((entry = readdir(src_dir)) != NULL) {
 		/* Exclude '.' and '..' files from source directory */
-		if (strcmp(entry->d_name, "..") && strcmp(entry->d_name, ".")) {
+		if (DOT_OR_DOTDOT(entry->d_name)) {
 			getcwd(cwd, PATH_SIZE);
-			snprintf(dest_filename,
-				 PATH_SIZE,
-				 "%s/%s%s", dest,
-				 ".", entry->d_name);
-			snprintf(src_filename, PATH_SIZE,
-				 "%s/%s/%s", cwd, src,
-				 entry->d_name);
+
+			memset(dest_filename, 0, PATH_SIZE);
+			memset(src_filename, 0, PATH_SIZE);
+
+			strncat(dest_filename, dest, PATH_SIZE - 1);
+			strncat(dest_filename, "/.", PATH_SIZE - 1);
+			strncat(dest_filename, entry->d_name, PATH_SIZE - 1);
+
+			strncat(src_filename, cwd, PATH_SIZE - 1);
+			strncat(src_filename, "/", PATH_SIZE - 1);
+			strncat(src_filename, src, PATH_SIZE - 1);
+			strncat(src_filename, "/", PATH_SIZE - 1);
+			strncat(src_filename, entry->d_name, PATH_SIZE - 1);
+
 			rm(dest_filename);
 			if (!symlink(src_filename, dest_filename))
 				fprintf(stdout, "%s -> %s\n",
@@ -171,7 +183,9 @@ int install(char *script)
 	char confirm[10];
 
 	getcwd(cwd, PATH_SIZE);
-	snprintf(script_path, PATH_SIZE, "%s/install/%s", cwd, script);
+	strncat(script_path, cwd, PATH_SIZE - 1);
+	strncat(script_path, "/install/", PATH_SIZE - 1);
+	strncat(script_path, script, PATH_SIZE - 1);
 
 	printf("execute install script %s? (Potentially Dangerous) [y/N] ", script);
 	scanf("%c", confirm);
@@ -224,8 +238,8 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 	if (token_index > 3) {
 		if (!strcmp(line_tokens[3], "sys")) {
 			gethostname(hostname, HOSTNAME_SIZE);
-			strcat(line_tokens[1], "-");
-			strcat(line_tokens[1], hostname);
+			strncat(line_tokens[1], "-", TOKEN_SIZE - 1);
+			strncat(line_tokens[1], hostname, TOKEN_SIZE - 1);
 		}
 	}
 
@@ -239,8 +253,8 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 		if (!strcmp(line_tokens[0], "run")) {
 			memset(command, 0, COMMAND_SIZE);
 			for (i = 1; i < token_index; i++) {
-				strcat(command, line_tokens[i]);
-				strcat(command, " ");
+				strncat(command, line_tokens[i], COMMAND_SIZE - 1);
+				strncat(command, " ", COMMAND_SIZE - 1);
 			}
 			system(command);
 		}
@@ -254,7 +268,7 @@ lexconfig(FILE *config)
 {
 	char line_tokens[TOKENS][TOKEN_SIZE];
 	char line_buffer[LINE_BUFFER_SIZE];
-	char new_token[TOKEN_SIZE];
+	char expanded_token[TOKEN_SIZE];
 	int token_index;
 	char *token;
 	int line;
@@ -276,17 +290,15 @@ lexconfig(FILE *config)
 		while (token != NULL) {
 			/* expand ~ to $HOME */
 			if (token[0] == '~') {
+				memset(expanded_token, 0, TOKEN_SIZE);
 				memmove(token, token+1, strlen(token));
-				snprintf(new_token,
-					 TOKEN_SIZE,
-					 "%s%s",
-					 getenv("HOME"),
-					 token);
-				strcpy(line_tokens[token_index], new_token);
+				strncat(expanded_token, getenv("HOME"), TOKEN_SIZE - 1);
+				strncat(expanded_token, token, TOKEN_SIZE - 1);
+				strncpy(line_tokens[token_index], expanded_token, TOKEN_SIZE);
 			} else if (token[0] == '#') {
 				break;
 			} else {
-				strcpy(line_tokens[token_index], token);
+				strncpy(line_tokens[token_index], token, TOKEN_SIZE);
 			}
 			token = strtok(NULL, " ");
 			token_index++;
