@@ -238,11 +238,10 @@ parseconfig(char line_tokens[TOKENS][TOKEN_SIZE], int token_index)
 	char command[COMMAND_SIZE];
 	int i;
 
-	if (token_index > 3) {
-		if (!strcmp(line_tokens[3], "sys")) {
-			gethostname(hostname, HOSTNAME_SIZE);
-			strncomb(line_tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
-		}
+	if (line_tokens[1][strlen(line_tokens[1]) - 1] == '@') {
+		line_tokens[1][strlen(line_tokens[1]) - 1] = 0;
+		gethostname(hostname, HOSTNAME_SIZE);
+		strncomb(line_tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
 	}
 
 	if (token_index >= 2) {

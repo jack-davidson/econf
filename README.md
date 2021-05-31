@@ -14,12 +14,20 @@ Econf reads a configuration file called `econf` in your configuration repository
 
 `files directory another_directory`
 
-### `sys` option
-At the end of a configuration command, if you put `sys`, the hostname of your machine
-will get appended to the source directory. This is useful for having different configs for
-different machines. You can have a directory alsa-lt0 and alsa-dt0 where the hostnames are lt0
-and dt0 respectively. If you put sys at the end of a directive, the directory with your hostname
-postfix will be linked to the target directory.
+### `@`
+If @ is at the end of the second field in a config line, it will be replaced with a dash
+and a hostname. This is helpful for using different config files for different machines.
+
+example:
+
+```
+files xinit@ ~/
+```
+would expand to
+
+```
+files xinit-hostnameofmachine ~/
+```
 
 ### `run`
 Run a command:
