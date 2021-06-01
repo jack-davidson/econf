@@ -379,11 +379,13 @@ int main(int argc, char **argv)
 	if ((err = parseargs(argc, argv)) < 0) {
 		printf("failed to parse arguments (error code %i)\n", err);
 		usage();
+		return err;
 	}
 
 	if ((config = loadfile("econf")) == NULL) {
 		printf("failed to load config file\n");
 		usage();
+		return -1;
 	}
 
 	if ((err = readconfig(config)) < 0) {
