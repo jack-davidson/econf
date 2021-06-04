@@ -201,8 +201,12 @@ int install(char *script)
 
 	if (strcmp(confirm, "n")) {
 		printf("executing install script %s\n", script);
-		if (execl(script_path, "", NULL) < 0) {
-			printf("failed to execute install script %s\n", script);
+		/* fork and exec on child process */
+		if (fork() != 0) {
+			if (execl(script_path, "", NULL) < 0) {
+				printf("failed to execute install script %s\n", script);
+			}
+			exit(1);
 		}
 	}
 	return 0;
@@ -266,7 +270,9 @@ int command(char tokens[TOKENS][TOKEN_SIZE], int t)
  */
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
+	/* deprecated */
 	if (tokens[1][strlen(tokens[1]) - 1] == '@') {
+		printf("'@' notation is deprecated, please switch to host()\n");
 		char hostname[HOSTNAME_SIZE];
 		tokens[1][strlen(tokens[1]) - 1] = 0;
 		gethostname(hostname, HOSTNAME_SIZE);
@@ -274,6 +280,15 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 	}
 
 	if (t >= 2) {
+		if (strstr(tokens[1], "host(") != NULL) {
+			if (tokens[1][strlen(tokens[1]) - 1] == ')') {
+				char hostname[HOSTNAME_SIZE];
+				tokens[1][strlen(tokens[1]) - 1] = 0;
+				memmove(tokens[1], tokens[1]+5, TOKEN_SIZE);
+				gethostname(hostname, HOSTNAME_SIZE);
+				strncomb(tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
+			}
+		}
 		if (!strcmp(tokens[0], "dir")) {
 			linkdir(tokens[2], tokens[1]);
 		}
@@ -283,7 +298,7 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 		if (!strcmp(tokens[0], "install")) {
 			install(tokens[1]);
 		}
-		if (!strcmp(tokens[0], "run")) {
+		if (!strcmp(tokens[0], "sh")) {
 			command(tokens, t);
 		}
 	}
