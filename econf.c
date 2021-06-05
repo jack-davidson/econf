@@ -32,7 +32,6 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
 char *stripnewline(char *s);
 char *expandtilde(char *dest, char *src, int l);
-int parseargs(int argc, char **argv);
 int linkfiles(char *dest, char *src);
 int linkdir(char *dest, char *src);
 int readconfig(FILE *config);
@@ -230,33 +229,6 @@ int install(char *script)
 	return 0;
 }
 
-/* parse main program arguments */
-int parseargs(int argc, char **argv) {
-	int option;
-
-	while ((option = getopt(argc, argv, "vhC:")) != -1) {
-		switch (option) {
-		case 'v':
-			version();
-			exit(0);
-			break;
-		case 'h':
-			usage();
-			exit(0);
-			break;
-		case 'C':
-			chdir(optarg);
-			break;
-		default:
-			break;
-		}
-	}
-
-	if (argc > optind && !strcmp(argv[optind], "install"))
-		install(argv[optind + 1]);
-	return 0;
-}
-
 /* load config file, handle errors and return file descriptor */
 FILE * loadfile(char *file)
 {
@@ -264,8 +236,11 @@ FILE * loadfile(char *file)
 		FILE *fd;
 		fd = fopen(file, "r");
 		return fd;
+	} else {
+		printf("failed to load config file\n");
+		usage();
+		return NULL;
 	}
-	return NULL;
 }
 
 /* run command using argv with size TOKENS and each element size TOKEN_SIZE, and argc */
@@ -356,7 +331,6 @@ int readconfig(FILE *config)
 	char exptoken[TOKEN_SIZE]; /* new token produced by expanding certain characters to other strings */
 	char *token;
 	int l;   /* keep track of line number */
-	int err;
 	int t;   /* amount of tokens */
 
 	l = 1;
@@ -388,12 +362,7 @@ int readconfig(FILE *config)
 			t++; /* new line (increment line) */
 		}
 
-		/* handle parser errors */
-		if ((err = (parseline(tokens, t))) < 0) {
-			printf("failed to parse line %i in config (error code %i)\n",
-			       l, err);
-			return err;
-		}
+		parseline(tokens, t);
 
 		/* reset line buffer and increment line number */
 		memset(line_buffer, 0, LINE_BUFFER_SIZE);
@@ -405,26 +374,34 @@ int readconfig(FILE *config)
 int main(int argc, char **argv)
 {
 	FILE *config;
-	int err;
 
-	/* handle errors: */
-
-	if ((err = parseargs(argc, argv)) < 0) {
-		printf("failed to parse arguments (error code %i)\n", err);
-		usage();
-		return err;
+	int option;
+	while ((option = getopt(argc, argv, "vhC:")) != -1) {
+		switch (option) {
+		case 'v':
+			version();
+			exit(0);
+			break;
+		case 'h':
+			usage();
+			exit(0);
+			break;
+		case 'C':
+			chdir(optarg);
+			break;
+		default:
+			break;
+		}
 	}
 
+	if (argc > optind && !strcmp(argv[optind], "install"))
+		install(argv[optind + 1]);
+
 	if ((config = loadfile("econf")) == NULL) {
-		printf("failed to load config file\n");
-		usage();
 		return -1;
 	}
 
-	if ((err = readconfig(config)) < 0) {
-		printf("failed to lex config (error code %i)\n", err);
-		return err;
-	}
+	readconfig(config);
 
 	fclose(config);
 	return 0;
