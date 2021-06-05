@@ -29,6 +29,7 @@
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
+int confirm(char *confirm_message, char *item);
 char *stripnewline(char *s);
 char *expandtilde(char *dest, char *src, int l);
 int parseargs(int argc, char **argv);
@@ -183,23 +184,40 @@ int strtolower(char *s, char *str, size_t size)
 	return -1;
 }
 
+int confirm(char *confirm_message, char *item) {
+	char confirm[10] = {0};
+	char *message_format;
+
+	if (item == NULL) {
+		message_format = malloc(11);
+		strcpy(message_format, "%s?");
+	} else if (item != NULL) {
+		message_format = malloc(14);
+		strcpy(message_format, "%s %s?");
+	}
+
+	strcat(message_format, " [Y/n] ");
+
+	printf(message_format, confirm_message, item);
+	free(message_format);
+
+	scanf("%c", confirm);
+	strtolower(confirm, confirm, sizeof(confirm));
+	if (strcmp(confirm, "n"))
+		return 1;
+	else
+		return 0;
+}
+
 int install(char *script)
 {
-	char script_path[PATH_SIZE];
+	char script_path[PATH_SIZE] = {0};
 	char cwd[PATH_SIZE];
-	char confirm[10];
-
-	memset(script_path, 0, sizeof(script_path));
-	memset(confirm, 0, sizeof(confirm));
 
 	getcwd(cwd, PATH_SIZE);
 	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
-	printf("install %s? [Y/n] ", script);
-	scanf("%c", confirm);
-	strtolower(confirm, confirm, sizeof(confirm));
-
-	if (strcmp(confirm, "n")) {
+	if (confirm("install", script)) {
 		printf("executing install script %s\n", script);
 		/* fork and exec on child process */
 		if (fork() != 0) {
