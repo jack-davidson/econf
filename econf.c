@@ -120,10 +120,10 @@ int linkdir(char *dest, char *src)
 	rm(dest_dir);
 
 	if(!symlink(src_dir, dest_dir))
-		fprintf(stdout, "%s -> %s\n",
+		fprintf(stdout, "    symlink %s -> %s\n",
 			src_dir, dest_dir);
 	else
-		fprintf(stderr, "symlink failed: %s -> %s\n",
+		fprintf(stderr, "    symlink failed: %s -> %s\n",
 			src_dir, dest_dir);
 
 	return 0;
@@ -159,11 +159,11 @@ int link_dotfiles(char *dest, char *src)
 
 			rm(dest_filename);
 			if (!symlink(src_filename, dest_filename))
-				fprintf(stdout, "%s -> %s\n",
+				fprintf(stdout, "    symlink %s -> %s\n",
 					src_filename, dest_filename);
 			else
 				fprintf(stderr,
-					"symlink failed: %s -> %s\n",
+					"    symlink failed: %s -> %s\n",
 					src_filename, dest_filename);
 		}
 	}
@@ -234,7 +234,7 @@ int install(char *script)
 	getcwd(cwd, PATH_SIZE);
 	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
-	if (opts.force || confirm(":: install", script)) {
+	if (opts.force || confirm("\n:: install", script)) {
 		printf("executing install script %s\n", script);
 		system(script_path);
 	} else {
