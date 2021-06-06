@@ -8,6 +8,7 @@
 
 #define  _XOPEN_SOURCE 700
 #include <ctype.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,6 +28,8 @@
 #define TOKENS		 128  /* maximum allowed config tokens */
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
 #define COMMAND_SIZE	 512  /* maximum size of a command */
+
+static int force = 0;
 
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
@@ -166,7 +169,7 @@ int link_dotfiles(char *dest, char *src)
 
 void usage()
 {
-	printf("usage: econf [-vh] [-C working_directory] \n");
+	printf("usage: econf [-vhfC working_directory] \n");
 }
 
 void version()
@@ -216,15 +219,9 @@ int install(char *script)
 	getcwd(cwd, PATH_SIZE);
 	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
-	if (confirm("install", script)) {
+	if (force || confirm(":: install", script)) {
 		printf("executing install script %s\n", script);
-		/* fork and exec on child process */
-		if (fork() != 0) {
-			if (execl(script_path, "", NULL) < 0) {
-				printf("failed to execute install script %s\n", script);
-			}
-			exit(1);
-		}
+		system(script_path);
 	}
 	return 0;
 }
@@ -376,8 +373,11 @@ int main(int argc, char **argv)
 	FILE *config;
 
 	int option;
-	while ((option = getopt(argc, argv, "vhC:")) != -1) {
+	while ((option = getopt(argc, argv, "fvhC:")) != -1) {
 		switch (option) {
+		case 'f':
+			force = 1;
+			break;
 		case 'v':
 			version();
 			exit(0);
@@ -394,10 +394,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (argc > optind && !strcmp(argv[optind], "install"))
+	if (argc > optind && !strcmp(argv[optind], "install")) {
 		install(argv[optind + 1]);
-
-	if ((config = loadfile("econf")) == NULL) {
+		exit(0);
+	} if ((config = loadfile("econf")) == NULL) {
 		return -1;
 	}
 
