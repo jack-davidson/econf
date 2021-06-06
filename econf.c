@@ -29,7 +29,11 @@
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
-static int force = 0;
+struct options {
+	unsigned int force:1;
+};
+
+static struct options opts;
 
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
@@ -219,7 +223,7 @@ int install(char *script)
 	getcwd(cwd, PATH_SIZE);
 	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
 
-	if (force || confirm(":: install", script)) {
+	if (opts.force || confirm(":: install", script)) {
 		printf("executing install script %s\n", script);
 		system(script_path);
 	}
@@ -376,7 +380,7 @@ int main(int argc, char **argv)
 	while ((option = getopt(argc, argv, "fvhC:")) != -1) {
 		switch (option) {
 		case 'f':
-			force = 1;
+			opts.force = 1;
 			break;
 		case 'v':
 			version();
