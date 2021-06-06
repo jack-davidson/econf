@@ -213,10 +213,12 @@ int confirm(char *confirm_message, char *item) {
 	printf(message_format, confirm_message, item);
 	free(message_format);
 
-	scanf("%c", confirm);
+	fgets(confirm, 10, stdin);
 	strtolower(confirm, confirm, sizeof(confirm));
-	if (strcmp(confirm, "n"))
+	if (confirm[0] != 'n')
 		return 1;
+	else if (confirm[0] == 0)
+		return 0;
 	else
 		return 0;
 }
@@ -232,6 +234,8 @@ int install(char *script)
 	if (opts.force || confirm(":: install", script)) {
 		printf("executing install script %s\n", script);
 		system(script_path);
+	} else {
+		printf("aborted instalation of %s\n", script);
 	}
 	return 0;
 }
