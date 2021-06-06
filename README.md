@@ -1,6 +1,10 @@
 # econf
 Automatically deploy configuration files.
 
+## usage
+Receive help for econf with
+`econf -h`
+
 ## configuration
 Econf reads a configuration file called `econf` in your configuration repository.
 
@@ -8,6 +12,19 @@ Econf reads a configuration file called `econf` in your configuration repository
 `dir`: link a directory to another directory:
 
 `dir directory another_directory`
+
+### `install`
+`install` executes an installation script located in `install/`
+
+example:
+
+`install vim-plug`
+...
+```
+ls install/
+    vim-plug
+```
+vim-plug gets executed
 
 ### `files`
 `files`: link files in directory to another directory as hidden files
