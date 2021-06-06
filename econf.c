@@ -120,7 +120,7 @@ int linkdir(char *dest, char *src)
 	rm(dest_dir);
 
 	if(!symlink(src_dir, dest_dir))
-		fprintf(stdout, "    symlink %s -> %s\n",
+		fprintf(stdout, "    symlinking %s -> %s\n",
 			src_dir, dest_dir);
 	else
 		fprintf(stderr, "    symlink failed: %s -> %s\n",
@@ -159,7 +159,7 @@ int link_dotfiles(char *dest, char *src)
 
 			rm(dest_filename);
 			if (!symlink(src_filename, dest_filename))
-				fprintf(stdout, "    symlink %s -> %s\n",
+				fprintf(stdout, "    symlinking %s -> %s\n",
 					src_filename, dest_filename);
 			else
 				fprintf(stderr,
