@@ -186,7 +186,7 @@ int strtolower(char *s, char *str, size_t size)
 {
 	int i;
 	for (i = 0; i < size; i++) {
-		*(s + i) = tolower(*(str + i));
+		s[i] = tolower(s[i]);
 	}
 	return -1;
 }
