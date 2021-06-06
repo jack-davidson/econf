@@ -35,6 +35,7 @@ struct options {
 
 static struct options opts;
 
+int help();
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
 char *stripnewline(char *s);
@@ -190,6 +191,11 @@ int strtolower(char *s, char *str, size_t size)
 	return -1;
 }
 
+int help()
+{
+	return 0;
+}
+
 int confirm(char *confirm_message, char *item) {
 	char confirm[10] = {0};
 	char *message_format;
@@ -197,7 +203,7 @@ int confirm(char *confirm_message, char *item) {
 	if (item == NULL) {
 		message_format = malloc(11);
 		strcpy(message_format, "%s?");
-	} else if (item != NULL) {
+	} else {
 		message_format = malloc(14);
 		strcpy(message_format, "%s %s?");
 	}
@@ -274,15 +280,6 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 	}
 
 	if (t >= 2) {
-		if (strstr(tokens[1], "host(") != NULL) {
-			if (tokens[1][strlen(tokens[1]) - 1] == ')') {
-				char hostname[HOSTNAME_SIZE];
-				tokens[1][strlen(tokens[1]) - 1] = 0;
-				memmove(tokens[1], tokens[1]+5, TOKEN_SIZE);
-				gethostname(hostname, HOSTNAME_SIZE);
-				strncomb(tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
-			}
-		}
 		if (!strcmp(tokens[0], "dir")) {
 			linkdir(tokens[2], tokens[1]);
 		}
@@ -346,6 +343,7 @@ int readconfig(FILE *config)
 		}
 		stripnewline(line_buffer);
 
+
 		/* begin tokenization of line buffer */
 		t = 0;
 		token = strtok(line_buffer, " ");
@@ -356,9 +354,19 @@ int readconfig(FILE *config)
 				strncpy(tokens[t], exptoken, TOKEN_SIZE);
 			case '#': /* skip lines that begin with # (comments) */
 				break;
-			default: /* otherwise copy the token to the token array */
+			default:
 				strncpy(tokens[t], token, TOKEN_SIZE);
 			}
+
+			if (strstr(token, ":host") != NULL) {
+				char hostname[HOSTNAME_SIZE];
+				token[strcspn(token, ":")] = '\0';
+				gethostname(hostname, HOSTNAME_SIZE);
+				strncomb(token, TOKEN_SIZE - 1, ":", hostname, NULL);
+				strncpy(tokens[t], token, TOKEN_SIZE);
+			}
+
+
 			token = strtok(NULL, " ");
 			t++; /* new line (increment line) */
 		}
@@ -388,6 +396,7 @@ int main(int argc, char **argv)
 			break;
 		case 'h':
 			usage();
+			help();
 			exit(0);
 			break;
 		case 'C':
