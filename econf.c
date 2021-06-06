@@ -174,7 +174,7 @@ int link_dotfiles(char *dest, char *src)
 
 void usage()
 {
-	printf("usage: econf [-vhfC working_directory] \n");
+	printf("usage: econf [OPTIONS] [COMMANDS] \n");
 }
 
 void version()
@@ -193,6 +193,9 @@ int strtolower(char *s, char *str, size_t size)
 
 int help()
 {
+	usage();
+	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: set working directory\n\n");
+	printf("COMMANDS:\ninstall <script>\n");
 	return 0;
 }
 
@@ -399,7 +402,6 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'h':
-			usage();
 			help();
 			exit(0);
 			break;
