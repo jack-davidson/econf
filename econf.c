@@ -338,6 +338,7 @@ int readconfig(FILE *config)
 	int l;   /* keep track of line number */
 	int t;   /* amount of tokens */
 
+	printf(":: beginning configuration...\n\n");
 	l = 1;
 	while ((fgets(line_buffer, LINE_BUFFER_SIZE, config) != NULL)) {
 		/* process line buffer before it is tokenized */
