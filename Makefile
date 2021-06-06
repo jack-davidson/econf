@@ -22,3 +22,6 @@ install:
 
 clean:
 	rm -f ${OBJ} econf
+
+uninstall:
+	rm -f ${PREFIX}/bin/econf
