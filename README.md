@@ -14,8 +14,23 @@ Econf reads a configuration file called `econf` in your configuration repository
 
 `files directory another_directory`
 
-### `@`
-If @ is at the end of the second field in a config line, it will be replaced with a dash
+### `:host` [PREFERRED OVER @]
+:host appended at the end of a token will expand to :$(hostname) allowing different files to
+be used for different machines.
+
+example:
+
+```
+files xinit:host ~/
+```
+would expand to
+
+```
+files xinit:hostnameofmachine ~/
+```
+
+### `@` [DEPRECATED]
+[DEPRECATED] If @ is at the end of the second field in a config line, it will be replaced with a dash
 and a hostname. This is helpful for using different config files for different machines.
 
 example:
@@ -29,10 +44,10 @@ would expand to
 files xinit-hostnameofmachine ~/
 ```
 
-### `run`
+### `sh`
 Run a command:
 
-`run command arg arg ...`
+`sh command arg arg ...`
 
 ### comments
 A comment can exist in its own line or at the end of a line. A line starting with `#` is a comment.
@@ -89,9 +104,9 @@ dir     spotifyd       ~/.config
 dir     spotify-tui    ~/.config
 
 # hostname postfix
-files   xinit  ~/      sys
+files   xinit@  ~/
 # hostname postfix
-files   alsa   ~/      sys
+files   alsa@   ~/
 
 files   tmux ~
 files   zsh  ~
