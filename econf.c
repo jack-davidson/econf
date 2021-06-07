@@ -34,11 +34,13 @@ struct status;
 
 /* hold state of options */
 struct options {
-	unsigned int force:1;
+	unsigned force:1;
 };
 
 /* hold state of status */
 struct status {
+	unsigned symlinkstart:1;
+	unsigned installstart:1;
 	int nsymlinks;
 	int nfailedsymlinks;
 	int ninstallscripts;
@@ -119,6 +121,11 @@ int linkdir(char *dest, char *src)
 	char src_dir[PATH_SIZE] = {0};
 	char cwd[PATH_SIZE];
 
+	if (!sts.symlinkstart) {
+		sts.symlinkstart = 1;
+		printf(":: starting config symlinking\n\n");
+	}
+
 	if(access(src, F_OK)) {
 		fprintf(stderr, "cannot open directory: %s\n", src);
 		return -1;
@@ -152,6 +159,11 @@ int link_dotfiles(char *dest, char *src)
 	struct dirent *entry;
 	char cwd[PATH_SIZE];
 	DIR *src_dir;
+
+	if (!sts.symlinkstart) {
+		sts.symlinkstart = 1;
+		printf(":: starting config symlinking\n\n");
+	}
 
 	src_dir = opendir(src);
 	if (src_dir == NULL){
@@ -253,15 +265,22 @@ int install(char tokens[TOKENS][TOKEN_SIZE], int t)
 	int i;
 
 	printf("\n");
+
+	if (!sts.installstart) {
+		sts.installstart = 1;
+		printf(":: beginning execution of installation scripts\n\n");
+	}
+
 	getcwd(cwd, PATH_SIZE);
 	strncomb(cmd, PATH_SIZE - 1, cwd, "/install/", NULL);
 
 	for (i = 1; i < t; i++) {
 		strncomb(cmd, COMMAND_SIZE - 1, tokens[i], " ", NULL);
 	}
-	printf("installing %s %s\n", tokens[1], *(tokens + 2));
+	printf("    installing %s %s\n", tokens[1], *(tokens + 2));
 	if (confirm("\n:: continue with installation", NULL)) {
 		system(cmd);
+		sts.ninstallscripts++;
 	} else {
 		printf("installation aborted\n");
 	}
@@ -314,14 +333,11 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 	if (t >= 2) {
 		if (!strcmp(tokens[0], "dir")) {
 			linkdir(tokens[2], tokens[1]);
-		}
-		if (!strcmp(tokens[0], "files")) {
+		} else if (!strcmp(tokens[0], "files")) {
 			link_dotfiles(tokens[2], tokens[1]);
-		}
-		if (!strcmp(tokens[0], "install")) {
+		} else if (!strcmp(tokens[0], "install")) {
 			install(tokens, t);
-		}
-		if (!strcmp(tokens[0], "sh")) {
+		} else if (!strcmp(tokens[0], "sh")) {
 			command(tokens, t);
 		}
 	}
