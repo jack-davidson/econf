@@ -20,7 +20,7 @@
 
 #define DOT_OR_DOTDOT(name) strncmp(name, "..", 2) & strncmp(name, ".", 1)
 
-#define VERSION "1"
+#define VERSION "1.0"
 
 #define PATH_SIZE	 512  /* maximum supported path size */
 #define LINE_BUFFER_SIZE 512  /* maximum length of line in config file */
