@@ -29,23 +29,35 @@
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
 #define COMMAND_SIZE	 512  /* maximum size of a command */
 
+struct options;
+struct status;
+
+/* hold state of options */
 struct options {
 	unsigned int force:1;
 };
 
+/* hold state of status */
+struct status {
+	int nsymlinks;
+	int nfailedsymlinks;
+	int ninstallscripts;
+};
+
+static struct status sts; /* global state tracker */
 static struct options opts;
 
 int help();
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
 char *stripnewline(char *s);
+int install(char tokens[TOKENS][TOKEN_SIZE], int t);
 char *expandtilde(char *dest, char *src, int l);
 int linkfiles(char *dest, char *src);
 int linkdir(char *dest, char *src);
 int readconfig(FILE *config);
 int rm(char *path);
 FILE *loadfile(char *file);
-int install(char *script);
 int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
@@ -119,12 +131,15 @@ int linkdir(char *dest, char *src)
 
 	rm(dest_dir);
 
-	if(!symlink(src_dir, dest_dir))
+	if(!symlink(src_dir, dest_dir)) {
 		fprintf(stdout, "    symlinking %s -> %s\n",
 			src_dir, dest_dir);
-	else
+		sts.nsymlinks++;
+	} else {
 		fprintf(stderr, "    symlink failed: %s -> %s\n",
 			src_dir, dest_dir);
+		sts.nfailedsymlinks++;
+	}
 
 	return 0;
 }
@@ -158,13 +173,17 @@ int link_dotfiles(char *dest, char *src)
 				 cwd, "/", src, "/", entry->d_name, NULL);
 
 			rm(dest_filename);
-			if (!symlink(src_filename, dest_filename))
+			if (!symlink(src_filename, dest_filename)) {
 				fprintf(stdout, "    symlinking %s -> %s\n",
 					src_filename, dest_filename);
-			else
+				sts.nsymlinks++;
+			} else {
 				fprintf(stderr,
 					"    symlink failed: %s -> %s\n",
 					src_filename, dest_filename);
+				sts.nfailedsymlinks++;
+			}
+
 		}
 	}
 
@@ -195,13 +214,15 @@ int help()
 {
 	usage();
 	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: set working directory\n\n");
-	printf("COMMANDS:\ninstall <script>\n");
 	return 0;
 }
 
 int confirm(char *confirm_message, char *item) {
 	char confirm[10] = {0};
 	char *message_format;
+
+	if (opts.force)
+		return 1;
 
 	if (item == NULL) {
 		message_format = malloc(11);
@@ -218,27 +239,31 @@ int confirm(char *confirm_message, char *item) {
 
 	fgets(confirm, 10, stdin);
 	strtolower(confirm, confirm, sizeof(confirm));
-	if (confirm[0] != 'n')
+	if (confirm[0] == 'n') {
+		return 0;
+	} else {
 		return 1;
-	else if (confirm[0] == 0)
-		return 0;
-	else
-		return 0;
+	}
 }
 
-int install(char *script)
+int install(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
-	char script_path[PATH_SIZE] = {0};
+	char cmd[COMMAND_SIZE] = {0};
 	char cwd[PATH_SIZE];
+	int i;
 
+	printf("\n");
 	getcwd(cwd, PATH_SIZE);
-	strncomb(script_path, PATH_SIZE - 1, cwd, "/install/", script, NULL);
+	strncomb(cmd, PATH_SIZE - 1, cwd, "/install/", NULL);
 
-	if (opts.force || confirm("\n:: install", script)) {
-		printf("executing install script %s\n", script);
-		system(script_path);
+	for (i = 1; i < t; i++) {
+		strncomb(cmd, COMMAND_SIZE - 1, tokens[i], " ", NULL);
+	}
+	printf("installing %s %s\n", tokens[1], *(tokens + 2));
+	if (confirm("\n:: continue with installation", NULL)) {
+		system(cmd);
 	} else {
-		printf("aborted instalation of %s\n", script);
+		printf("installation aborted\n");
 	}
 	return 0;
 }
@@ -294,7 +319,7 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 			link_dotfiles(tokens[2], tokens[1]);
 		}
 		if (!strcmp(tokens[0], "install")) {
-			install(tokens[1]);
+			install(tokens, t);
 		}
 		if (!strcmp(tokens[0], "sh")) {
 			command(tokens, t);
@@ -382,13 +407,14 @@ int readconfig(FILE *config)
 		parseline(tokens, t);
 
 		/* reset line buffer and increment line number */
+		memset(tokens, 0, sizeof(tokens[0][0]) * TOKENS * TOKEN_SIZE);
 		memset(line_buffer, 0, LINE_BUFFER_SIZE);
 		l++;
 	}
 	return 0;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	FILE *config;
 
@@ -414,14 +440,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (argc > optind && !strcmp(argv[optind], "install")) {
-		install(argv[optind + 1]);
-		exit(0);
-	} if ((config = loadfile("econf")) == NULL) {
+	if ((config = loadfile("econf")) == NULL) {
 		return -1;
 	}
 
 	readconfig(config);
+
+	printf("\n:: symlinked %i objs\n", sts.nsymlinks);
+	printf(":: installed %i scripts\n", sts.ninstallscripts);
+	printf(":: completed installation with %i failed symlinks\n", sts.nfailedsymlinks);
 
 	fclose(config);
 	return 0;
