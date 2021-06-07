@@ -17,12 +17,13 @@
 #include <sys/stat.h>
 #include <wordexp.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #define DOT_OR_DOTDOT(name) strncmp(name, "..", 2) & strncmp(name, ".", 1)
 
 #define VERSION "1.0"
 
-#define PATH_SIZE	 512  /* maximum supported path size */
+#define PATH_SIZE	 PATH_MAX + 1 /* maximum supported path size */
 #define LINE_BUFFER_SIZE 512  /* maximum length of line in config file */
 #define TOKEN_SIZE	 256  /* maximum length of a config token */
 #define TOKENS		 128  /* maximum allowed config tokens */
@@ -31,6 +32,8 @@
 
 struct options;
 struct status;
+
+typedef char Path[PATH_SIZE];
 
 /* hold state of options */
 struct options {
@@ -54,17 +57,19 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
 int confirm(char *confirm_message, char *item);
 char *stripnewline(char *s);
 int install(char tokens[TOKENS][TOKEN_SIZE], int t);
-char *expandtilde(char *dest, char *src, int l);
-int linkfiles(char *dest, char *src);
-int linkdir(char *dest, char *src);
+char *expandtilde(Path dest, Path src, int l);
+int linkfiles(Path dest, Path src);
+int linkdir(Path dest, Path src);
 int readconfig(FILE *config);
-int rm(char *path);
-FILE *loadfile(char *file);
+int rm(Path path);
+FILE *loadfile(Path file);
 int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
 char *strncomb(char *s, size_t n, ...);
 int main(int argc, char **argv);
+
+Path CONFIG_FILE_NAME = "econf";
 
 char *strncomb(char *s, size_t n, ...)
 {
@@ -83,7 +88,7 @@ char *strncomb(char *s, size_t n, ...)
 }
 
 /* recursively delete a directory or file */
-int rm(char *path)
+int rm(Path path)
 {
 	struct stat path_stat;
 	int is_dir;
@@ -115,11 +120,11 @@ int rm(char *path)
 }
 
 /* link a directory src to another directory dest */
-int linkdir(char *dest, char *src)
+int linkdir(Path dest, Path src)
 {
-	char dest_dir[PATH_SIZE] = {0};
-	char src_dir[PATH_SIZE] = {0};
-	char cwd[PATH_SIZE];
+	Path dest_dir = {0};
+	Path src_dir = {0};
+	Path cwd = {0};
 
 	if (!sts.symlinkstart) {
 		sts.symlinkstart = 1;
@@ -152,12 +157,13 @@ int linkdir(char *dest, char *src)
 }
 
 /* link all files within a directory src to another directory dest as hidden files */
-int link_dotfiles(char *dest, char *src)
+int link_dotfiles(Path dest, Path src)
 {
-	char dest_filename[PATH_SIZE];
-	char src_filename[PATH_SIZE];
+	Path dest_filename;
+	Path src_filename;
+	Path cwd;
+
 	struct dirent *entry;
-	char cwd[PATH_SIZE];
 	DIR *src_dir;
 
 	if (!sts.symlinkstart) {
@@ -261,7 +267,7 @@ int confirm(char *confirm_message, char *item) {
 int install(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
 	char cmd[COMMAND_SIZE] = {0};
-	char cwd[PATH_SIZE];
+	Path cwd;
 	int i;
 
 	printf("\n");
@@ -288,11 +294,11 @@ int install(char tokens[TOKENS][TOKEN_SIZE], int t)
 }
 
 /* load config file, handle errors and return file descriptor */
-FILE * loadfile(char *file)
+FILE * loadfile(Path path)
 {
-	if (!access(file, F_OK)) {
+	if (!access(path, F_OK)) {
 		FILE *fd;
-		fd = fopen(file, "r");
+		fd = fopen(path, "r");
 		return fd;
 	} else {
 		printf("failed to load config file\n");
@@ -345,7 +351,7 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 }
 
 /* expand tilde in src to HOME, place result in dest and return pointer to it */
-char *expandtilde(char *dest, char *src, int size)
+char *expandtilde(Path dest, Path src, int size)
 {
 	char *tmp;
 	int len;
@@ -374,7 +380,7 @@ int readconfig(FILE *config)
 {
 	char line_buffer[LINE_BUFFER_SIZE]; /* holds line before being tokenized */
 	char tokens[TOKENS][TOKEN_SIZE];
-	char exptoken[TOKEN_SIZE]; /* new token produced by expanding certain characters to other strings */
+	Path exppath;
 	char *token;
 	int l;   /* keep track of line number */
 	int t;   /* amount of tokens */
@@ -399,8 +405,8 @@ int readconfig(FILE *config)
 		while (token != NULL) {
 			switch (token[0]) {
 			case '~': /* expand tilde to $HOME */
-				expandtilde(exptoken, token, TOKEN_SIZE);
-				strncpy(tokens[t], exptoken, TOKEN_SIZE);
+				expandtilde(exppath, token, TOKEN_SIZE);
+				strncpy(tokens[t], exppath, TOKEN_SIZE);
 			case '#': /* skip lines that begin with # (comments) */
 				break;
 			default:
@@ -456,7 +462,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if ((config = loadfile("econf")) == NULL) {
+	if ((config = loadfile(CONFIG_FILE_NAME)) == NULL) {
 		return -1;
 	}
 
