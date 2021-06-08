@@ -37,6 +37,7 @@ typedef char Path[PATH_SIZE];
 
 struct options {
 	unsigned force:1;
+	Path configpath;
 };
 
 struct status {
@@ -46,9 +47,6 @@ struct status {
 	int nfailedsymlinks;
 	int ninstallscripts;
 };
-
-static struct status sts;
-static struct options opts;
 
 int help();
 int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
@@ -67,7 +65,8 @@ void usage();
 char *strncomb(char *s, size_t n, ...);
 int main(int argc, char **argv);
 
-Path CONFIG_FILE_NAME = "econf";
+static struct status sts;
+static struct options opts;
 
 char *
 strncomb(char *s, size_t n, ...)
@@ -211,7 +210,7 @@ linkdotfiles(Path dest, Path src)
 void
 usage()
 {
-	printf("usage: econf [-fhv] [-C directory]\n");
+	printf("usage: econf [-fhv] [-c path] [-C directory]\n");
 }
 
 void
@@ -234,7 +233,8 @@ int
 help()
 {
 	usage();
-	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: set working directory\n\n");
+	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: "
+	    "set working directory\n-c <file>: use file for config\n\n");
 	return 0;
 }
 
@@ -438,9 +438,12 @@ int
 main(int argc, char *argv[])
 {
 	FILE *config;
-
 	int option;
-	while ((option = getopt(argc, argv, "fvhC:")) != -1) {
+
+	memset(opts.configpath, 0, PATH_SIZE);
+	strcpy(opts.configpath, "econf");
+
+	while ((option = getopt(argc, argv, "fvhC:c:")) != -1) {
 		switch (option) {
 		case 'f':
 			opts.force = 1;
@@ -453,6 +456,10 @@ main(int argc, char *argv[])
 			help();
 			exit(0);
 			break;
+		case 'c':
+			memset(opts.configpath, 0, PATH_SIZE);
+			strcpy(opts.configpath, optarg);
+			break;
 		case 'C':
 			chdir(optarg);
 			break;
@@ -461,9 +468,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if ((config = loadconfig(CONFIG_FILE_NAME)) == NULL) {
+	if ((config = loadconfig(opts.configpath)) == NULL)
 		return -1;
-	}
 
 	readconfig(config);
 
