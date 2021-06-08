@@ -23,24 +23,22 @@
 
 #define VERSION "1.0"
 
-#define PATH_SIZE	 PATH_MAX + 1 /* maximum supported path size */
-#define LINE_BUFFER_SIZE 512  /* maximum length of line in config file */
-#define TOKEN_SIZE	 256  /* maximum length of a config token */
-#define TOKENS		 128  /* maximum allowed config tokens */
-#define HOSTNAME_SIZE	 48   /* maximum size of hostname */
-#define COMMAND_SIZE	 512  /* maximum size of a sh */
+#define PATH_SIZE	 PATH_MAX + 1
+#define LINE_BUFFER_SIZE 512
+#define TOKEN_SIZE	 256
+#define TOKENS		 128
+#define HOSTNAME_SIZE	 48
+#define COMMAND_SIZE	 512
 
 struct options;
 struct status;
 
 typedef char Path[PATH_SIZE];
 
-/* hold state of options */
 struct options {
 	unsigned force:1;
 };
 
-/* hold state of status */
 struct status {
 	unsigned symlinkstart:1;
 	unsigned installstart:1;
@@ -49,7 +47,7 @@ struct status {
 	int ninstallscripts;
 };
 
-static struct status sts; /* global state tracker */
+static struct status sts;
 static struct options opts;
 
 int help();
@@ -88,7 +86,6 @@ strncomb(char *s, size_t n, ...)
 	return s;
 }
 
-/* recursively delete a directory or file */
 int
 rm(Path path)
 {
@@ -121,7 +118,6 @@ rm(Path path)
 	return 0;
 }
 
-/* link a directory src to another directory dest */
 int
 linkdir(Path dest, Path src)
 {
@@ -161,7 +157,7 @@ linkdir(Path dest, Path src)
 
 /* link all files within a directory src to another directory dest as hidden files */
 int
-link_dotfiles(Path dest, Path src)
+linkdotfiles(Path dest, Path src)
 {
 	Path dest_filename;
 	Path src_filename;
@@ -346,7 +342,7 @@ parseline(char tokens[TOKENS][TOKEN_SIZE], int ntokens)
 		if (!strcmp(tokens[0], "dir")) {
 			linkdir(tokens[2], tokens[1]);
 		} else if (!strcmp(tokens[0], "files")) {
-			link_dotfiles(tokens[2], tokens[1]);
+			linkdotfiles(tokens[2], tokens[1]);
 		} else if (!strcmp(tokens[0], "install")) {
 			install(tokens, ntokens);
 		} else if (!strcmp(tokens[0], "sh")) {
