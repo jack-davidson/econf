@@ -19,7 +19,7 @@
 #include <stdarg.h>
 #include <limits.h>
 
-#define DOT_OR_DOTDOT(name) strncmp(name, "..", 2) & strncmp(name, ".", 1)
+#define DOT_OR_DOTDOT(name) !(strncmp(name, "..", 2) & strncmp(name, ".", 1))
 
 #define VERSION "1.0"
 
@@ -28,7 +28,7 @@
 #define TOKEN_SIZE	 256  /* maximum length of a config token */
 #define TOKENS		 128  /* maximum allowed config tokens */
 #define HOSTNAME_SIZE	 48   /* maximum size of hostname */
-#define COMMAND_SIZE	 512  /* maximum size of a command */
+#define COMMAND_SIZE	 512  /* maximum size of a sh */
 
 struct options;
 struct status;
@@ -62,7 +62,7 @@ int linkfiles(Path dest, Path src);
 int linkdir(Path dest, Path src);
 int readconfig(FILE *config);
 int rm(Path path);
-FILE *loadfile(Path file);
+FILE *loadconfig(Path file);
 int strtolower(char *s, char *str, size_t size);
 void version();
 void usage();
@@ -108,7 +108,7 @@ rm(Path path)
 			return -1;
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
-			if (DOT_OR_DOTDOT(entry->d_name)) {
+			if (!DOT_OR_DOTDOT(entry->d_name)) {
 				char new_path[PATH_SIZE];
 				strncomb(new_path, PATH_SIZE - 1,
 				       	 path, "/", entry->d_name, NULL);
@@ -182,8 +182,7 @@ link_dotfiles(Path dest, Path src)
 	}
 
 	while ((entry = readdir(src_dir)) != NULL) {
-		/* Exclude '.' and '..' files from source directory */
-		if (DOT_OR_DOTDOT(entry->d_name)) {
+		if (!DOT_OR_DOTDOT(entry->d_name)) {
 			getcwd(cwd, PATH_SIZE);
 
 			memset(dest_filename, 0, PATH_SIZE);
@@ -216,7 +215,7 @@ link_dotfiles(Path dest, Path src)
 void
 usage()
 {
-	printf("usage: econf [OPTIONS] [COMMANDS] \n");
+	printf("usage: econf [-fhv] [-C directory]\n");
 }
 
 void
@@ -303,9 +302,8 @@ install(char tokens[TOKENS][TOKEN_SIZE], int t)
 	return 0;
 }
 
-/* load config file, handle errors and return file descriptor */
 FILE *
-loadfile(Path path)
+loadconfig(Path path)
 {
 	if (!access(path, F_OK)) {
 		FILE *fd;
@@ -318,29 +316,24 @@ loadfile(Path path)
 	}
 }
 
-/* run command using argv with size TOKENS and each element size TOKEN_SIZE, and argc */
 int
-command(char tokens[TOKENS][TOKEN_SIZE], int t)
+sh(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
-	char command[COMMAND_SIZE] = {0};
+	char cmd[COMMAND_SIZE] = {0};
 	int i;
 
 	for (i = 1; i < t; i++) {
-		strncomb(command, COMMAND_SIZE - 1, tokens[i], " ", NULL);
+		strncomb(cmd, COMMAND_SIZE - 1, tokens[i], " ", NULL);
 	}
-	system(command);
+
+	system(cmd);
 	return 0;
 }
 
-/* parse tokens of config line, called by readconfig for each line of config file
- *
- * tokens: array of strings containing tokens
- * t:      amount of tokens
- */
 int
-parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
+parseline(char tokens[TOKENS][TOKEN_SIZE], int ntokens)
 {
-	/* deprecated */
+	/* DEPRECATED */
 	if (tokens[1][strlen(tokens[1]) - 1] == '@') {
 		printf("'@' notation is deprecated, please switch to host()\n");
 		char hostname[HOSTNAME_SIZE];
@@ -349,40 +342,38 @@ parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 		strncomb(tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
 	}
 
-	if (t >= 2) {
+	if (ntokens >= 2) {
 		if (!strcmp(tokens[0], "dir")) {
 			linkdir(tokens[2], tokens[1]);
 		} else if (!strcmp(tokens[0], "files")) {
 			link_dotfiles(tokens[2], tokens[1]);
 		} else if (!strcmp(tokens[0], "install")) {
-			install(tokens, t);
+			install(tokens, ntokens);
 		} else if (!strcmp(tokens[0], "sh")) {
-			command(tokens, t);
+			sh(tokens, ntokens);
 		}
 	}
 	return 0;
 }
 
-/* expand tilde in src to HOME, place result in dest and return pointer to it */
 char *
 expandtilde(Path dest, Path src, int size)
 {
-	char *tmp;
 	int len;
+	char *tmp;
 
-	len = strlen(src); /* get length of src */
-	/* add space for null character */
-	tmp = calloc(len + 1, 1); /* get zeroed memory of size len */
-	memset(dest, 0, size); /* zero dest */
-	strncpy(tmp, src, len); /* copy src to tmp */
-	memmove(tmp, tmp+1, len); /* omit first character */
-	/* expand tilde */
+	len = strlen(src);
+	tmp = calloc(len + 1, 1);
+
+	memset(dest, 0, size);
+	strncpy(tmp, src, len);
+	memmove(tmp, tmp + 1, len); /* copy all but first char of tmp */
 	strncomb(dest, size - 1, getenv("HOME"), tmp, NULL);
+
 	free(tmp);
 	return dest;
 }
 
-/* strip trailing newline of string s and return pointer to s */
 char *
 stripnewline(char *s)
 {
@@ -390,21 +381,17 @@ stripnewline(char *s)
 	return s;
 }
 
-/* tokenize lines of config file and call parseline() on each line */
 int
 readconfig(FILE *config)
 {
-	char line_buffer[LINE_BUFFER_SIZE]; /* holds line before being tokenized */
 	char tokens[TOKENS][TOKEN_SIZE];
+	char line_buffer[LINE_BUFFER_SIZE];
 	Path exppath;
+	int ntokens;
 	char *token;
-	int l;   /* keep track of line number */
-	int t;   /* amount of tokens */
 
 	printf(":: beginning configuration...\n\n");
-	l = 1;
 	while ((fgets(line_buffer, LINE_BUFFER_SIZE, config) != NULL)) {
-		/* process line buffer before it is tokenized */
 		switch (line_buffer[0]) {
 			case '\n':
 				continue;
@@ -415,39 +402,38 @@ readconfig(FILE *config)
 		stripnewline(line_buffer);
 
 
-		/* begin tokenization of line buffer */
-		t = 0;
+		ntokens = 0;
 		token = strtok(line_buffer, " ");
 		while (token != NULL) {
 			switch (token[0]) {
-			case '~': /* expand tilde to $HOME */
+			case '~':
 				expandtilde(exppath, token, TOKEN_SIZE);
-				strncpy(tokens[t], exppath, TOKEN_SIZE);
-			case '#': /* skip lines that begin with # (comments) */
+				strncpy(tokens[ntokens], exppath, TOKEN_SIZE);
+				/* FALLTHROUGH */
+			case '#':
 				break;
 			default:
-				strncpy(tokens[t], token, TOKEN_SIZE);
+				strncpy(tokens[ntokens], token, TOKEN_SIZE);
 			}
 
+			/* expand :host to : + hostname */
 			if (strstr(token, ":host") != NULL) {
 				char hostname[HOSTNAME_SIZE];
 				token[strcspn(token, ":")] = '\0';
 				gethostname(hostname, HOSTNAME_SIZE);
 				strncomb(token, TOKEN_SIZE - 1, ":", hostname, NULL);
-				strncpy(tokens[t], token, TOKEN_SIZE);
+				strncpy(tokens[ntokens], token, TOKEN_SIZE);
 			}
 
 
 			token = strtok(NULL, " ");
-			t++; /* new line (increment line) */
+			ntokens++;
 		}
 
-		parseline(tokens, t);
+		parseline(tokens, ntokens);
 
-		/* reset line buffer and increment line number */
 		memset(tokens, 0, sizeof(tokens[0][0]) * TOKENS * TOKEN_SIZE);
 		memset(line_buffer, 0, LINE_BUFFER_SIZE);
-		l++;
 	}
 	return 0;
 }
@@ -479,7 +465,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if ((config = loadfile(CONFIG_FILE_NAME)) == NULL) {
+	if ((config = loadconfig(CONFIG_FILE_NAME)) == NULL) {
 		return -1;
 	}
 
