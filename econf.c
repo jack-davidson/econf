@@ -71,7 +71,8 @@ int main(int argc, char **argv);
 
 Path CONFIG_FILE_NAME = "econf";
 
-char *strncomb(char *s, size_t n, ...)
+char *
+strncomb(char *s, size_t n, ...)
 {
 	va_list args;
 	char *arg;
@@ -88,7 +89,8 @@ char *strncomb(char *s, size_t n, ...)
 }
 
 /* recursively delete a directory or file */
-int rm(Path path)
+int
+rm(Path path)
 {
 	struct stat path_stat;
 	int is_dir;
@@ -120,7 +122,8 @@ int rm(Path path)
 }
 
 /* link a directory src to another directory dest */
-int linkdir(Path dest, Path src)
+int
+linkdir(Path dest, Path src)
 {
 	Path dest_dir = {0};
 	Path src_dir = {0};
@@ -157,7 +160,8 @@ int linkdir(Path dest, Path src)
 }
 
 /* link all files within a directory src to another directory dest as hidden files */
-int link_dotfiles(Path dest, Path src)
+int
+link_dotfiles(Path dest, Path src)
 {
 	Path dest_filename;
 	Path src_filename;
@@ -209,17 +213,20 @@ int link_dotfiles(Path dest, Path src)
 	return 0;
 }
 
-void usage()
+void
+usage()
 {
 	printf("usage: econf [OPTIONS] [COMMANDS] \n");
 }
 
-void version()
+void
+version()
 {
 	printf("econf-%s\n", VERSION);
 }
 
-int strtolower(char *s, char *str, size_t size)
+int
+strtolower(char *s, char *str, size_t size)
 {
 	int i;
 	for (i = 0; i < size; i++) {
@@ -228,14 +235,16 @@ int strtolower(char *s, char *str, size_t size)
 	return -1;
 }
 
-int help()
+int
+help()
 {
 	usage();
 	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: set working directory\n\n");
 	return 0;
 }
 
-int confirm(char *confirm_message, char *item) {
+int
+confirm(char *confirm_message, char *item) {
 	char confirm[10] = {0};
 	char *message_format;
 
@@ -264,7 +273,8 @@ int confirm(char *confirm_message, char *item) {
 	}
 }
 
-int install(char tokens[TOKENS][TOKEN_SIZE], int t)
+int
+install(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
 	char cmd[COMMAND_SIZE] = {0};
 	Path cwd;
@@ -294,7 +304,8 @@ int install(char tokens[TOKENS][TOKEN_SIZE], int t)
 }
 
 /* load config file, handle errors and return file descriptor */
-FILE * loadfile(Path path)
+FILE *
+loadfile(Path path)
 {
 	if (!access(path, F_OK)) {
 		FILE *fd;
@@ -308,7 +319,8 @@ FILE * loadfile(Path path)
 }
 
 /* run command using argv with size TOKENS and each element size TOKEN_SIZE, and argc */
-int command(char tokens[TOKENS][TOKEN_SIZE], int t)
+int
+command(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
 	char command[COMMAND_SIZE] = {0};
 	int i;
@@ -325,7 +337,8 @@ int command(char tokens[TOKENS][TOKEN_SIZE], int t)
  * tokens: array of strings containing tokens
  * t:      amount of tokens
  */
-int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
+int
+parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 {
 	/* deprecated */
 	if (tokens[1][strlen(tokens[1]) - 1] == '@') {
@@ -351,7 +364,8 @@ int parseline(char tokens[TOKENS][TOKEN_SIZE], int t)
 }
 
 /* expand tilde in src to HOME, place result in dest and return pointer to it */
-char *expandtilde(Path dest, Path src, int size)
+char *
+expandtilde(Path dest, Path src, int size)
 {
 	char *tmp;
 	int len;
@@ -369,14 +383,16 @@ char *expandtilde(Path dest, Path src, int size)
 }
 
 /* strip trailing newline of string s and return pointer to s */
-char *stripnewline(char *s)
+char *
+stripnewline(char *s)
 {
 	s[strcspn(s, "\n")] = 0;
 	return s;
 }
 
 /* tokenize lines of config file and call parseline() on each line */
-int readconfig(FILE *config)
+int
+readconfig(FILE *config)
 {
 	char line_buffer[LINE_BUFFER_SIZE]; /* holds line before being tokenized */
 	char tokens[TOKENS][TOKEN_SIZE];
@@ -436,7 +452,8 @@ int readconfig(FILE *config)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	FILE *config;
 
