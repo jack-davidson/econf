@@ -19,7 +19,8 @@
 #include <stdarg.h>
 #include <limits.h>
 
-#define DOT_OR_DOTDOT(name) !(strncmp(name, "..", 2) & strncmp(name, ".", 1))
+#define DOT_OR_DOTDOT(name) !(strncmp(name, "..", 2) \
+			    & strncmp(name, ".", 1))
 
 #define VERSION "1.0"
 
@@ -27,130 +28,118 @@
 #define LINE_BUFFER_SIZE 512
 #define TOKEN_SIZE	 256
 #define TOKENS		 128
-#define HOSTNAME_SIZE	 48
-#define COMMAND_SIZE	 512
+#define	HOSTNAME_SIZE	 48
+#define	COMMAND_SIZE	 512
 
-struct options;
-struct status;
+typedef	char Tokens[TOKENS][TOKEN_SIZE];
+typedef	char Path[PATH_SIZE];
 
-typedef char Path[PATH_SIZE];
+struct	options;
+struct	status;
 
-struct options {
+struct	 options {
 	unsigned int force:1;
 	Path configpath;
 };
 
-struct status {
+struct 	status {
 	unsigned int symlinkstart:1;
 	unsigned int installstart:1;
-	int nsymlinks;
 	int nfailedsymlinks;
 	int ninstallscripts;
+	int nsymlinks;
 };
 
-int help();
-int parseline(char tokens[TOKENS][TOKEN_SIZE], int t);
-int confirm(char *confirm_message, char *item);
-char *stripnewline(char *s);
-int install(char tokens[TOKENS][TOKEN_SIZE], int t);
-char *expandtilde(Path dest, Path src, int l);
-int linkfiles(Path dest, Path src);
-int linkdir(Path dest, Path src);
-int readconfig(FILE *config);
-int rm(Path path);
-FILE *loadconfig(Path file);
-int strtolower(char *s, char *str, size_t size);
-void version();
-void usage();
-char *strncomb(char *s, size_t n, ...);
-int main(int argc, char **argv);
+int	confirm(char *confirm_message, char *item);
+int	parseline(Tokens tokens, int ntokens, int l);
+int	linkdotfiles(Path dest, Path src);
+int	install(Tokens tokens, int t);
+int	linkdir(Path dest, Path src);
+int	parseerror(Tokens tokens, int ntokens, int l);
+int	readconfig(FILE *config);
+int	sh(Tokens tokens, int t);
+int	rm(Path path);
+char	*strtolower(char *s, char *str, size_t size);
+char	*expandtilde(Path dest, Path src, int l);
+char	*strncomb(char *s, size_t n, ...);
+char	*stripnewline(char *s);
+FILE	*loadconfig(Path file);
+void	version();
+void	usage();
+void	help();
 
-static struct status sts;
-static struct options opts;
+int	main(int argc, char **argv);
 
-char *
-strncomb(char *s, size_t n, ...)
-{
-	va_list args;
-	char *arg;
-
-	va_start(args, n);
-	arg = va_arg(args, char *);
-
-	while (arg != (char *)NULL) {
-		strncat(s, arg, n);
-		arg = va_arg(args, char *);
-	}
-	va_end(args);
-	return s;
-}
+static	struct status sts;
+static	struct options opts;
 
 int
-rm(Path path)
-{
-	struct stat path_stat;
-	int is_dir;
+confirm(char *confirm_message, char *item) {
+	char confirm[10] = {0};
+	char *message_format;
 
-	lstat(path, &path_stat);
-	is_dir = S_ISDIR(path_stat.st_mode);
+	if (opts.force)
+		return 1;
 
-	if (is_dir) {
-		struct dirent *entry;
-		DIR *src_dir;
-
-		src_dir = opendir(path);
-		if (src_dir == NULL){
-			fprintf(stderr, "cannot open %s\n", path);
-			return -1;
-		}
-		while ((entry = readdir(src_dir)) != NULL) {
-			if (!DOT_OR_DOTDOT(entry->d_name)) {
-				char new_path[PATH_SIZE];
-				strncomb(new_path, PATH_SIZE - 1,
-				       	 path, "/", entry->d_name, NULL);
-				rm(new_path);
-			}
-		}
-		closedir(src_dir);
-	}
-	remove(path);
-	return 0;
-}
-
-int
-linkdir(Path dest, Path src)
-{
-	Path dest_dir = {0};
-	Path src_dir = {0};
-	Path cwd = {0};
-
-	if (!sts.symlinkstart) {
-		sts.symlinkstart = 1;
-		printf(":: starting config symlinking\n\n");
-	}
-
-	if(access(src, F_OK)) {
-		fprintf(stderr, "cannot open directory: %s\n", src);
-		return -1;
-	}
-
-	getcwd(cwd, PATH_SIZE);
-
-	strncomb(src_dir, PATH_SIZE - 1, cwd, "/", src, NULL);
-	strncomb(dest_dir, PATH_SIZE - 1, dest, "/", src, NULL);
-
-	rm(dest_dir);
-
-	if(!symlink(src_dir, dest_dir)) {
-		fprintf(stdout, "    symlinking %s -> %s\n",
-			src_dir, dest_dir);
-		sts.nsymlinks++;
+	if (item == NULL) {
+		message_format = malloc(11);
+		strcpy(message_format, "%s?");
 	} else {
-		fprintf(stderr, "    symlink failed: %s -> %s\n",
-			src_dir, dest_dir);
-		sts.nfailedsymlinks++;
+		message_format = malloc(14);
+		strcpy(message_format, "%s %s?");
 	}
 
+	strcat(message_format, " [Y/n] ");
+
+	printf(message_format, confirm_message, item);
+	free(message_format);
+
+	fgets(confirm, 10, stdin);
+	strtolower(confirm, confirm, sizeof(confirm));
+	if (confirm[0] == 'n') {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+int
+parseline(Tokens tokens, int ntokens, int l)
+{
+	if (ntokens == 1) {
+		if (!(strcmp(tokens[0], "noconfirm"))) {
+			opts.force = 1;
+			return 0;
+		}
+	} if (ntokens == 3) {
+		if (!strcmp(tokens[0], "dir"))
+			return linkdir(tokens[2], tokens[1]);
+		else if (!strcmp(tokens[0], "files"))
+			return linkdotfiles(tokens[2], tokens[1]);
+	} if (!strcmp(tokens[0], "sh"))
+		return sh(tokens, ntokens);
+	if (!strcmp(tokens[0], "install"))
+		return install(tokens, ntokens);
+	return -1;
+}
+
+int
+parseerror(Tokens tokens, int ntokens, int l) {
+	int f;
+	int i;
+
+	f = opts.force;
+	opts.force = 0;
+
+	printf("failed to parse line %i:\n\tunrecognized tokens: \"", l);
+	for (i = 0; i < ntokens; i++) {
+		printf("%s ", tokens[i]);
+	}
+	printf("\"\n");
+	confirm("\ncontinue with error", NULL);
+	printf("\n");
+
+	opts.force = f;
 	return 0;
 }
 
@@ -207,69 +196,8 @@ linkdotfiles(Path dest, Path src)
 	return 0;
 }
 
-void
-usage()
-{
-	printf("usage: econf [-fhv] [-c path] [-C directory]\n");
-}
-
-void
-version()
-{
-	printf("econf-%s\n", VERSION);
-}
-
 int
-strtolower(char *s, char *str, size_t size)
-{
-	int i;
-	for (i = 0; i < size; i++) {
-		s[i] = tolower(s[i]);
-	}
-	return -1;
-}
-
-int
-help()
-{
-	usage();
-	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: "
-	    "set working directory\n-c <file>: use file for config\n\n");
-	return 0;
-}
-
-int
-confirm(char *confirm_message, char *item) {
-	char confirm[10] = {0};
-	char *message_format;
-
-	if (opts.force)
-		return 1;
-
-	if (item == NULL) {
-		message_format = malloc(11);
-		strcpy(message_format, "%s?");
-	} else {
-		message_format = malloc(14);
-		strcpy(message_format, "%s %s?");
-	}
-
-	strcat(message_format, " [Y/n] ");
-
-	printf(message_format, confirm_message, item);
-	free(message_format);
-
-	fgets(confirm, 10, stdin);
-	strtolower(confirm, confirm, sizeof(confirm));
-	if (confirm[0] == 'n') {
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-int
-install(char tokens[TOKENS][TOKEN_SIZE], int t)
+install(Tokens tokens, int t)
 {
 	char cmd[COMMAND_SIZE] = {0};
 	Path cwd;
@@ -298,6 +226,122 @@ install(char tokens[TOKENS][TOKEN_SIZE], int t)
 	return 0;
 }
 
+int
+linkdir(Path dest, Path src)
+{
+	Path dest_dir = {0};
+	Path src_dir = {0};
+	Path cwd = {0};
+
+	if (!sts.symlinkstart) {
+		sts.symlinkstart = 1;
+		printf(":: starting config symlinking\n\n");
+	}
+
+	if(access(src, F_OK)) {
+		fprintf(stderr, "cannot open directory: %s\n", src);
+		return -1;
+	}
+
+	getcwd(cwd, PATH_SIZE);
+
+	strncomb(src_dir, PATH_SIZE - 1, cwd, "/", src, NULL);
+	strncomb(dest_dir, PATH_SIZE - 1, dest, "/", src, NULL);
+
+	rm(dest_dir);
+
+	if(!symlink(src_dir, dest_dir)) {
+		fprintf(stdout, "    symlinking %s -> %s\n",
+			src_dir, dest_dir);
+		sts.nsymlinks++;
+	} else {
+		fprintf(stderr, "    symlink failed: %s -> %s\n",
+			src_dir, dest_dir);
+		sts.nfailedsymlinks++;
+	}
+
+	return 0;
+}
+
+char *
+strncomb(char *s, size_t n, ...)
+{
+	va_list args;
+	char *arg;
+
+	va_start(args, n);
+	arg = va_arg(args, char *);
+
+	while (arg != (char *)NULL) {
+		strncat(s, arg, n);
+		arg = va_arg(args, char *);
+	}
+	va_end(args);
+	return s;
+}
+
+int
+rm(Path path)
+{
+	struct stat path_stat;
+	int is_dir;
+
+	lstat(path, &path_stat);
+	is_dir = S_ISDIR(path_stat.st_mode);
+
+	if (is_dir) {
+		struct dirent *entry;
+		DIR *src_dir;
+
+		src_dir = opendir(path);
+		if (src_dir == NULL){
+			fprintf(stderr, "cannot open %s\n", path);
+			return -1;
+		}
+		while ((entry = readdir(src_dir)) != NULL) {
+			if (!DOT_OR_DOTDOT(entry->d_name)) {
+				char new_path[PATH_SIZE];
+				strncomb(new_path, PATH_SIZE - 1,
+				       	 path, "/", entry->d_name, NULL);
+				rm(new_path);
+			}
+		}
+		closedir(src_dir);
+	}
+	remove(path);
+	return 0;
+}
+
+void
+usage()
+{
+	printf("usage: econf [-fhv] [-c path] [-C directory]\n");
+}
+
+void
+version()
+{
+	printf("econf-%s\n", VERSION);
+}
+
+char *
+strtolower(char *s, char *str, size_t size)
+{
+	int i;
+	for (i = 0; i < size; i++) {
+		s[i] = tolower(s[i]);
+	}
+	return s;
+}
+
+void
+help()
+{
+	usage();
+	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: "
+	    "set working directory\n-c <file>: use file for config\n\n");
+}
+
 FILE *
 loadconfig(Path path)
 {
@@ -313,7 +357,7 @@ loadconfig(Path path)
 }
 
 int
-sh(char tokens[TOKENS][TOKEN_SIZE], int t)
+sh(Tokens tokens, int t)
 {
 	char cmd[COMMAND_SIZE] = {0};
 	int i;
@@ -323,32 +367,6 @@ sh(char tokens[TOKENS][TOKEN_SIZE], int t)
 	}
 
 	system(cmd);
-	return 0;
-}
-
-int
-parseline(char tokens[TOKENS][TOKEN_SIZE], int ntokens)
-{
-	/* DEPRECATED */
-	if (tokens[1][strlen(tokens[1]) - 1] == '@') {
-		printf("'@' notation is deprecated, please switch to host()\n");
-		char hostname[HOSTNAME_SIZE];
-		tokens[1][strlen(tokens[1]) - 1] = 0;
-		gethostname(hostname, HOSTNAME_SIZE);
-		strncomb(tokens[1], TOKEN_SIZE - 1, "-", hostname, NULL);
-	}
-
-	if (ntokens >= 2) {
-		if (!strcmp(tokens[0], "dir")) {
-			linkdir(tokens[2], tokens[1]);
-		} else if (!strcmp(tokens[0], "files")) {
-			linkdotfiles(tokens[2], tokens[1]);
-		} else if (!strcmp(tokens[0], "install")) {
-			install(tokens, ntokens);
-		} else if (!strcmp(tokens[0], "sh")) {
-			sh(tokens, ntokens);
-		}
-	}
 	return 0;
 }
 
@@ -380,19 +398,22 @@ stripnewline(char *s)
 int
 readconfig(FILE *config)
 {
-	char tokens[TOKENS][TOKEN_SIZE];
+	Tokens tokens;
 	char line_buffer[LINE_BUFFER_SIZE];
 	Path exppath;
 	int ntokens;
 	char *token;
+	int l;
 
+	l = 1;
 	printf(":: beginning configuration...\n\n");
 	while ((fgets(line_buffer, LINE_BUFFER_SIZE, config) != NULL)) {
 		switch (line_buffer[0]) {
 			case '\n':
-				continue;
+				/* FALLTHROUGH */
+			case ' ':
+				/* FALLTHROUGH */
 			case '#':
-				fgets(line_buffer, LINE_BUFFER_SIZE, config);
 				continue;
 		}
 		stripnewline(line_buffer);
@@ -426,7 +447,10 @@ readconfig(FILE *config)
 			ntokens++;
 		}
 
-		parseline(tokens, ntokens);
+		if (parseline(tokens, ntokens, l) < 0) {
+			parseerror(tokens, ntokens, l);
+		}
+		l++;
 
 		memset(tokens, 0, sizeof(tokens[0][0]) * TOKENS * TOKEN_SIZE);
 		memset(line_buffer, 0, LINE_BUFFER_SIZE);
