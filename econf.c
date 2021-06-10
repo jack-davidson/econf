@@ -36,13 +36,13 @@ struct status;
 typedef char Path[PATH_SIZE];
 
 struct options {
-	unsigned force:1;
+	unsigned int force:1;
 	Path configpath;
 };
 
 struct status {
-	unsigned symlinkstart:1;
-	unsigned installstart:1;
+	unsigned int symlinkstart:1;
+	unsigned int installstart:1;
 	int nsymlinks;
 	int nfailedsymlinks;
 	int ninstallscripts;
