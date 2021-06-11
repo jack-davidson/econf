@@ -74,7 +74,8 @@ static	struct status sts;
 static	struct options opts;
 
 int
-confirm(char *confirm_message, char *item) {
+confirm(char *confirm_message, char *item)
+{
 	char confirm[10] = {0};
 	char *message_format;
 
@@ -124,7 +125,8 @@ parseline(Tokens tokens, int ntokens, int l)
 }
 
 int
-parseerror(Tokens tokens, int ntokens, int l) {
+parseerror(Tokens tokens, int ntokens, int l)
+{
 	int f;
 	int i;
 
@@ -173,9 +175,9 @@ linkdotfiles(Path dest, Path src)
 			memset(src_filename, 0, PATH_SIZE);
 
 			strncomb(dest_filename, PATH_SIZE - 1,
-				 dest, "/.", entry->d_name, NULL);
+				dest, "/.", entry->d_name, NULL);
 			strncomb(src_filename, PATH_SIZE - 1,
-				 cwd, "/", src, "/", entry->d_name, NULL);
+				cwd, "/", src, "/", entry->d_name, NULL);
 
 			rm(dest_filename);
 			if (!symlink(src_filename, dest_filename)) {
@@ -302,7 +304,7 @@ rm(Path path)
 			if (!DOT_OR_DOTDOT(entry->d_name)) {
 				char new_path[PATH_SIZE];
 				strncomb(new_path, PATH_SIZE - 1,
-				       	 path, "/", entry->d_name, NULL);
+					path, "/", entry->d_name, NULL);
 				rm(new_path);
 			}
 		}
@@ -339,7 +341,7 @@ help()
 {
 	usage();
 	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: "
-	    "set working directory\n-c <file>: use file for config\n\n");
+		"set working directory\n-c <file>: use file for config\n\n");
 }
 
 FILE *
