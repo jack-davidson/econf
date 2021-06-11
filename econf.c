@@ -111,6 +111,10 @@ parseline(Tokens tokens, int ntokens, int l)
 			opts.force = 1;
 			return 0;
 		}
+		if (!(strcmp(tokens[0], "confirm"))) {
+			opts.force = 0;
+			return 0;
+		}
 	} if (ntokens == 3) {
 		if (!strcmp(tokens[0], "dir"))
 			return linkdir(tokens[2], tokens[1]);
