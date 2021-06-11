@@ -1,75 +1,79 @@
-# econf
+econf
+=====
 Automatically deploy configuration files.
 
-## usage
+usage
+=====
 Receive help for econf with
 `econf -h`
 
-## configuration
+configuration
+=============
 Econf reads a configuration file called `econf` in your configuration repository.
 
-### `noconfirm`
+`noconfirm`
+===========
 don't ask user for input, same as -f option
 
-### `confirm`
+`confirm`
+=========
 ask for user input, same as omitting the -f option.
 Confirm and noconfirm can be used in tandem to allow certain parts
 of the configuration to be confirmed
 
-ex:
-```
-noconfirm
-dosomething that doesn't want to be confirmed
-confirm
-do something that wants to be confirmed
-```
+example:
 
-### `dir`
+    noconfirm
+    dosomething that doesn't want to be confirmed
+    confirm
+    do something that wants to be confirmed
+
+`dir`
+=====
 `dir`: link a directory to another directory:
 
-`dir directory another_directory`
+    dir directory another_directory
 
-### `install`
+`install`
+=========
 `install` executes an installation script located in `install/`
 
 example:
+    install vim-plug
+    ...
 
-`install vim-plug`
-...
-```
-ls install/
-    vim-plug
-```
+    $ ls install/
+        vim-plug
+
 vim-plug gets executed
 
-### `files`
+`files`
+=======
 `files`: link files in directory to another directory as hidden files
 
-`files directory another_directory`
+    files directory another_directory
 
-### `:host`
+`:host`
+=======
 :host appended at the end of a token will expand to :$(hostname) allowing different files to
 be used for different machines.
 
 example:
 
-```
-files xinit:host ~/
-```
+    files xinit:host ~/
+
 would expand to
 
-```
-files xinit:hostnameofmachine ~/
-```
+    files xinit:hostnameofmachine ~/
 
-### `sh`
+`sh`
+====
 Run a command:
 
-`sh command arg arg ...`
+    sh command arg arg ...
 
-### comments
+comments
+========
 A line starting with `#` is a comment.
 
-```
-# comment
-```
+    # comment
