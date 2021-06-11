@@ -2,7 +2,7 @@
 
 PREFIX = ~/.local/
 
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 SRC = econf.c
 OBJ = econf.o
