@@ -142,7 +142,8 @@ parseerror(Tokens tokens, int ntokens, int l)
 		printf("%s ", tokens[i]);
 	}
 	printf("\"\n");
-	confirm("\ncontinue with error", NULL);
+	if (!confirm("\ncontinue with error", NULL))
+		exit(1);
 	printf("\n");
 
 	opts.force = f;
