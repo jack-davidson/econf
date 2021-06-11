@@ -11,6 +11,19 @@ Econf reads a configuration file called `econf` in your configuration repository
 ### `noconfirm`
 don't ask user for input, same as -f option
 
+### `confirm`
+ask for user input, same as omitting the -f option.
+Confirm and noconfirm can be used in tandem to allow certain parts
+of the configuration to be confirmed
+
+ex:
+```
+noconfirm
+dosomething that doesn't want to be confirmed
+confirm
+do something that wants to be confirmed
+```
+
 ### `dir`
 `dir`: link a directory to another directory:
 
