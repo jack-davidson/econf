@@ -326,7 +326,7 @@ rm(Path path)
 void
 usage()
 {
-	printf("usage: econf [-fhv] [-c path] [-C directory]\n");
+	printf("usage: econf [-fihv] [-c path] [-C directory]\n");
 }
 
 void
@@ -349,8 +349,14 @@ void
 help()
 {
 	usage();
-	printf("\nOPTIONS:\n-v: version\n-h: help\n-f: force\n-C <directory>: "
-		"set working directory\n-c <file>: use file for config\n\n");
+	printf("\nOPTIONS:\n"
+	       "-v: version\n"
+	       "-h: help\n"
+	       "-f: force\n"
+	       "-i: run installation scripts\n"
+	       "-C <directory>: set working directory\n"
+	       "-c <file>: use file for config\n\n"
+	);
 }
 
 FILE *
