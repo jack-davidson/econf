@@ -34,15 +34,16 @@
 typedef	char Tokens[TOKENS][TOKEN_SIZE];
 typedef	char Path[PATH_SIZE];
 
-struct	options;
-struct	status;
+struct	flagstate;
+struct	appstate;
 
-struct	 options {
+struct	flagstate {
+	unsigned int install:1;
 	unsigned int force:1;
 	Path configpath;
 };
 
-struct 	status {
+struct 	appstate {
 	unsigned int symlinkstart:1;
 	unsigned int installstart:1;
 	int nfailedsymlinks;
@@ -70,8 +71,8 @@ void	help();
 
 int	main(int argc, char **argv);
 
-static	struct status sts;
-static	struct options opts;
+static	struct appstate status;
+static	struct flagstate flags;
 
 int
 confirm(char *confirm_message, char *item)
@@ -79,7 +80,7 @@ confirm(char *confirm_message, char *item)
 	char confirm[10] = {0};
 	char *message_format;
 
-	if (opts.force)
+	if (flags.force)
 		return 1;
 
 	if (item == NULL) {
@@ -109,11 +110,11 @@ parseline(Tokens tokens, int ntokens, int l)
 {
 	if (ntokens == 1) {
 		if (!(strcmp(tokens[0], "noconfirm"))) {
-			opts.force = 1;
+			flags.force = 1;
 			return 0;
 		}
 		if (!(strcmp(tokens[0], "confirm"))) {
-			opts.force = 0;
+			flags.force = 0;
 			return 0;
 		}
 	} if (ntokens == 3) {
@@ -134,8 +135,8 @@ parseerror(Tokens tokens, int ntokens, int l)
 	int f;
 	int i;
 
-	f = opts.force;
-	opts.force = 0;
+	f = flags.force;
+	flags.force = 0;
 
 	printf("failed to parse line %i:\n\tunrecognized tokens: \"", l);
 	for (i = 0; i < ntokens; i++) {
@@ -146,7 +147,7 @@ parseerror(Tokens tokens, int ntokens, int l)
 		exit(1);
 	printf("\n");
 
-	opts.force = f;
+	flags.force = f;
 	return 0;
 }
 
@@ -161,8 +162,8 @@ linkdotfiles(Path dest, Path src)
 	struct dirent *entry;
 	DIR *src_dir;
 
-	if (!sts.symlinkstart) {
-		sts.symlinkstart = 1;
+	if (!status.symlinkstart) {
+		status.symlinkstart = 1;
 		printf(":: starting config symlinking\n\n");
 	}
 
@@ -188,12 +189,12 @@ linkdotfiles(Path dest, Path src)
 			if (!symlink(src_filename, dest_filename)) {
 				fprintf(stdout, "    symlinking %s -> %s\n",
 					src_filename, dest_filename);
-				sts.nsymlinks++;
+				status.nsymlinks++;
 			} else {
 				fprintf(stderr,
 					"    symlink failed: %s -> %s\n",
 					src_filename, dest_filename);
-				sts.nfailedsymlinks++;
+				status.nfailedsymlinks++;
 			}
 
 		}
@@ -212,8 +213,11 @@ install(Tokens tokens, int t)
 
 	printf("\n");
 
-	if (!sts.installstart) {
-		sts.installstart = 1;
+	if (!flags.install)
+		return 0;
+
+	if (!status.installstart) {
+		status.installstart = 1;
 		printf(":: beginning execution of installation scripts\n\n");
 	}
 
@@ -226,7 +230,7 @@ install(Tokens tokens, int t)
 	printf("    installing %s %s\n", tokens[1], *(tokens + 2));
 	if (confirm("\n:: continue with installation", NULL)) {
 		system(cmd);
-		sts.ninstallscripts++;
+		status.ninstallscripts++;
 	} else {
 		printf("installation aborted\n");
 	}
@@ -240,8 +244,8 @@ linkdir(Path dest, Path src)
 	Path src_dir = {0};
 	Path cwd = {0};
 
-	if (!sts.symlinkstart) {
-		sts.symlinkstart = 1;
+	if (!status.symlinkstart) {
+		status.symlinkstart = 1;
 		printf(":: starting config symlinking\n\n");
 	}
 
@@ -260,11 +264,11 @@ linkdir(Path dest, Path src)
 	if(!symlink(src_dir, dest_dir)) {
 		fprintf(stdout, "    symlinking %s -> %s\n",
 			src_dir, dest_dir);
-		sts.nsymlinks++;
+		status.nsymlinks++;
 	} else {
 		fprintf(stderr, "    symlink failed: %s -> %s\n",
 			src_dir, dest_dir);
-		sts.nfailedsymlinks++;
+		status.nfailedsymlinks++;
 	}
 
 	return 0;
@@ -471,13 +475,13 @@ main(int argc, char *argv[])
 	FILE *config;
 	int option;
 
-	memset(opts.configpath, 0, PATH_SIZE);
-	strcpy(opts.configpath, "econf");
+	memset(flags.configpath, 0, PATH_SIZE);
+	strcpy(flags.configpath, "econf");
 
-	while ((option = getopt(argc, argv, "fvhC:c:")) != -1) {
+	while ((option = getopt(argc, argv, "fvhiC:c:")) != -1) {
 		switch (option) {
 		case 'f':
-			opts.force = 1;
+			flags.force = 1;
 			break;
 		case 'v':
 			version();
@@ -487,9 +491,12 @@ main(int argc, char *argv[])
 			help();
 			exit(0);
 			break;
+		case 'i':
+			flags.install = 1;
+			break;
 		case 'c':
-			memset(opts.configpath, 0, PATH_SIZE);
-			strcpy(opts.configpath, optarg);
+			memset(flags.configpath, 0, PATH_SIZE);
+			strcpy(flags.configpath, optarg);
 			break;
 		case 'C':
 			chdir(optarg);
@@ -499,14 +506,14 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if ((config = loadconfig(opts.configpath)) == NULL)
+	if ((config = loadconfig(flags.configpath)) == NULL)
 		return -1;
 
 	readconfig(config);
 
-	printf("\n:: symlinked %i objs\n", sts.nsymlinks);
-	printf(":: installed %i scripts\n", sts.ninstallscripts);
-	printf(":: completed installation with %i failed symlinks\n", sts.nfailedsymlinks);
+	printf("\n:: symlinked %i objs\n", status.nsymlinks);
+	printf(":: installed %i scripts\n", status.ninstallscripts);
+	printf(":: completed installation with %i failed symlinks\n", status.nfailedsymlinks);
 
 	fclose(config);
 	return 0;
