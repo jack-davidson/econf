@@ -1,6 +1,6 @@
 .POSIX:
 
-PREFIX = ~/.local/
+PREFIX = /usr/local/
 
 CFLAGS = -Wall -g
 
