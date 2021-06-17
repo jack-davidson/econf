@@ -2,7 +2,7 @@
 
 PREFIX = /usr/local/
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -DVERSION=\"1.3\" -D_XOPEN_SOURCE=700
 
 SRC = econf.c
 OBJ = econf.o

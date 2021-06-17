@@ -6,7 +6,6 @@
  *
  */
 
-#define  _XOPEN_SOURCE 700
 #include <ctype.h>
 #include <sys/wait.h>
 #include <dirent.h>
@@ -22,8 +21,6 @@
 /* return true if name is . or .. */
 #define DODD(name) (!(strncmp(name, "..", 2) \
 		   & strncmp(name, ".", 1)))
-
-#define VERSION "1.0"
 
 #define PATHSIZE	PATH_MAX + 1
 #define LINEBUFSIZE	512
@@ -86,6 +83,7 @@ confirm(char *confirm_message, char *item)
 
 	fgets(confirm, 10, stdin);
 	strtolower(confirm, confirm, sizeof(confirm));
+
 	if (confirm[0] == 'n') {
 		return 0;
 	} else {
@@ -315,13 +313,13 @@ rm(Path path)
 static void
 usage()
 {
-	printf("usage: econf [-fihv] [-c path] [-C directory]\n");
+	fprintf(stdout, "usage: econf [-fihv] [-c path] [-C directory]\n");
 }
 
 static void
 version()
 {
-	printf("econf-%s\n", VERSION);
+	fprintf(stdout, "econf-"VERSION"\n");
 }
 
 static char *
@@ -338,7 +336,7 @@ static void
 help()
 {
 	usage();
-	printf("\nOPTIONS:\n"
+	fprintf(stdout, "\nOPTIONS:\n"
 	       "-v: version\n"
 	       "-h: help\n"
 	       "-f: isforce\n"
@@ -356,7 +354,7 @@ loadconfig(Path path)
 		fd = fopen(path, "r");
 		return fd;
 	} else {
-		printf("failed to load config file\n");
+		fprintf(stdout, "failed to load config file\n");
 		usage();
 		return NULL;
 	}
@@ -413,7 +411,7 @@ readconfig(FILE *config)
 	int l;
 
 	l = 1;
-	printf(":: beginning configuration...\n\n");
+	fprintf(stdout, ":: beginning configuration...\n\n");
 	while ((fgets(line_buffer, LINEBUFSIZE, config) != NULL)) {
 		switch (line_buffer[0]) {
 			case '\n':
