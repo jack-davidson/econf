@@ -39,7 +39,7 @@ typedef char Command[COMMANDBUFSIZE];
 
 static int confirm(char *confirm_message, char *item);
 static int parseline(Tokens tokens, int ntokens, int l);
-static int linkdotfiles(Path dest, Path src);
+static int linkfiles(Path dest, Path src);
 static int install(Tokens tokens, int t);
 static int linkdir(Path dest, Path src);
 static int parseerror(Tokens tokens, int ntokens, int l);
@@ -109,7 +109,7 @@ parseline(Tokens tokens, int ntokens, int l)
 		if (!strcmp(tokens[0], "dir"))
 			return linkdir(tokens[2], tokens[1]);
 		else if (!strcmp(tokens[0], "files"))
-			return linkdotfiles(tokens[2], tokens[1]);
+			return linkfiles(tokens[2], tokens[1]);
 	} if (!strcmp(tokens[0], "sh"))
 		return sh(tokens, ntokens);
 	if (!strcmp(tokens[0], "install"))
@@ -141,7 +141,7 @@ parseerror(Tokens tokens, int ntokens, int l)
 
 /* link all files within a directory src to another directory dest as hidden files */
 static int
-linkdotfiles(Path dest, Path src)
+linkfiles(Path dest, Path src)
 {
 	Path dest_filename, src_filename, cwd;
 
@@ -167,7 +167,7 @@ linkdotfiles(Path dest, Path src)
 			memset(src_filename, 0, sizeof(Path));
 
 			strncomb(dest_filename, sizeof(Path),
-				dest, "/.", entry->d_name, NULL);
+				dest, "", entry->d_name, NULL);
 			strncomb(src_filename, sizeof(Path),
 				cwd, "/", src, "/", entry->d_name, NULL);
 
