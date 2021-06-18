@@ -39,7 +39,7 @@ static int linkfiles(char dest[1024], char src[1024]);
 static int install(Tokens tokens, int t);
 static int linkdir(char dest[1024], char src[1024]);
 static int parseerror(Tokens tokens, int ntokens, int l);
-static int expandhostname(char *s);
+static char *expandhostname(char *s);
 static int readconfig(FILE *config);
 static int sh(Tokens tokens, int t);
 static int rm(char path[1024]);
@@ -49,7 +49,6 @@ static char *strncomb(char *s, size_t n, ...);
 static char *stripnewline(char *s);
 static FILE *loadconfig(char file[1024]);
 static void version();
-void fullpath(char p[1024]);
 static void usage();
 static void help();
 
@@ -60,24 +59,21 @@ int isinstall, isforce;
 int symlinkstarted, installstarted;
 int nfailedsymlinks, ninstallscripts, nsymlinks;
 
-void
-fullpath(char p[1024])
-{
-	char cwd[1024];
-	getcwd(cwd, sizeof(cwd));
-	strncomb(p, sizeof(cwd), cwd, "/", p, NULL);
-}
-
-static int
+/* expand .*:host to .*:$(hostname), if present, return pointer
+ * to position of .*:host. in s */
+static char *
 expandhostname(char *s)
 {
-	if (strstr(s, ":host") != NULL) {
+	char *p;
+
+	if ((p = strstr(s, ":host")) != NULL) {
 		char hostname[HOSTNAMEBUFSIZE];
 		s[strcspn(s, ":")] = '\0';
 		gethostname(hostname, HOSTNAMEBUFSIZE);
 		strncomb(s, sizeof(Token), ":", hostname, NULL);
+		return p;
 	}
-	return 0;
+	return NULL;
 }
 
 static int
@@ -98,10 +94,8 @@ confirm(char *confirm_message, char *item)
 	}
 
 	strcat(message_format, " [Y/n] ");
-
 	printf(message_format, confirm_message, item);
 	free(message_format);
-
 	fgets(confirm, 10, stdin);
 	strtolower(confirm, confirm, sizeof(confirm));
 
@@ -140,8 +134,7 @@ parseline(Tokens tokens, int ntokens, int l)
 static int
 parseerror(Tokens tokens, int ntokens, int l)
 {
-	int f;
-	int i;
+	int i, f;
 
 	f = isforce;
 	isforce = 0;
@@ -151,8 +144,10 @@ parseerror(Tokens tokens, int ntokens, int l)
 		printf("%s ", tokens[i]);
 	}
 	printf("\"\n");
+
 	if (!confirm("\ncontinue with error", NULL))
 		exit(1);
+
 	printf("\n");
 
 	isforce = f;
@@ -163,7 +158,7 @@ parseerror(Tokens tokens, int ntokens, int l)
 static int
 linkfiles(char dest[1024], char src[1024])
 {
-	char dest_filename[1024], src_filename[1024], cwd[1024];
+	char dest_filename[4096], src_filename[4096], cwd[1024];
 
 	struct dirent *entry;
 	DIR *src_dir;
@@ -187,19 +182,18 @@ linkfiles(char dest[1024], char src[1024])
 
 			*dest_filename = *src_filename = '\0';
 
-			strncomb(dest_filename, sizeof(dest_filename),
-				dest, entry->d_name, NULL);
-			strncomb(src_filename, sizeof(src_filename),
-				cwd, "/", src, "/", entry->d_name, NULL);
+			snprintf(dest_filename, sizeof(dest_filename), "%s%s", dest, entry->d_name);
+			snprintf(src_filename, sizeof(src_filename), "%s/%s/%s", cwd, src, entry->d_name);
 
 			rm(dest_filename);
+
 			if (!symlink(src_filename, dest_filename)) {
-				fprintf(stdout, "    symlinking %s -> %s\n",
+				fprintf(stdout, "\tsymlinking %s -> %s\n",
 					src_filename, dest_filename);
 				nsymlinks++;
 			} else {
 				fprintf(stderr,
-					"    symlink failed: %s -> %s\n",
+					"\tsymlink failed: %s -> %s\n",
 					src_filename, dest_filename);
 				nfailedsymlinks++;
 			}
@@ -248,10 +242,10 @@ install(Tokens tokens, int t)
 static int
 linkdir(char dest[1024], char src[1024])
 {
-	char dest_dir[1024], src_dir[1024], cwd[1024];
+	char dest_dir[4096], src_dir[4096], cwd[1024];
 	char *s;
 
-	expandhostname(src);
+	s = expandhostname(src);
 
 	*dest_dir = *src_dir = '\0';
 
@@ -267,23 +261,20 @@ linkdir(char dest[1024], char src[1024])
 
 	getcwd(cwd, sizeof(cwd));
 
-	strncomb(src_dir, sizeof(src_dir), cwd, "/", src, NULL);
+	snprintf(src_dir, sizeof(src_dir), "%s/%s", cwd, src);
 
-	if ((s = strstr(src, ":")) != NULL) {
+	if (s != NULL)
 		*s = '\0';
-	}
 
-	strncomb(dest_dir, sizeof(dest_dir), dest, "/", src, NULL);
+	snprintf(dest_dir, sizeof(dest_dir), "%s/%s", dest, src);
 
 	rm(dest_dir);
 
 	if(!symlink(src_dir, dest_dir)) {
-		fprintf(stdout, "    symlinking %s -> %s\n",
-			src_dir, dest_dir);
+		fprintf(stdout, "\tsymlinking %s -> %s\n", src_dir, dest_dir);
 		nsymlinks++;
 	} else {
-		fprintf(stderr, "    symlink failed: %s -> %s\n",
-			src_dir, dest_dir);
+		fprintf(stderr, "\tsymlink failed: %s -> %s\n", src_dir, dest_dir);
 		nfailedsymlinks++;
 	}
 
@@ -311,6 +302,7 @@ static int
 rm(char path[1024])
 {
 	struct stat path_stat;
+	char new_path[1024];
 	int is_dir;
 
 	lstat(path, &path_stat);
@@ -327,7 +319,7 @@ rm(char path[1024])
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (!DODD(entry->d_name)) {
-				char new_path[1024];
+				*new_path = '\0';
 				strncomb(new_path, sizeof(new_path) - 1,
 					path, "/", entry->d_name, NULL);
 				rm(new_path);
