@@ -385,23 +385,7 @@ sh(Tokens tokens, int t)
 static char *
 expandtilde(char dest[1024], char src[1024], int size)
 {
-	int len;
-	char *tmp;
-
-	/* This section can be optimized by instead of
-	 * allocating and memmoving, we can modify the
-	 * location of the string terminator and increment the
-	 * char pointer.  */
-
-	len = strlen(src);
-	tmp = calloc(len + 1, 1);
-
-	*dest = '\0';
-	strncpy(tmp, src, len);
-	memmove(tmp, tmp + 1, len); /* copy all but first char of tmp */
-	snprintf(dest, size, "%s%s", getenv("HOME"), tmp);
-
-	free(tmp);
+	snprintf(dest, size, "%s%s", getenv("HOME"), ++src);
 	return dest;
 }
 
