@@ -31,34 +31,42 @@
 
 typedef	char Tokens[TOKENLEN][TOKENBUFSIZE];
 typedef char Token[TOKENBUFSIZE];
-typedef	char Path[PATHSIZE];
 typedef char Command[COMMANDBUFSIZE];
 
 static int confirm(char *confirm_message, char *item);
 static int parseline(Tokens tokens, int ntokens, int l);
-static int linkfiles(Path dest, Path src);
+static int linkfiles(char dest[1024], char src[1024]);
 static int install(Tokens tokens, int t);
-static int linkdir(Path dest, Path src);
+static int linkdir(char dest[1024], char src[1024]);
 static int parseerror(Tokens tokens, int ntokens, int l);
 static int expandhostname(char *s);
 static int readconfig(FILE *config);
 static int sh(Tokens tokens, int t);
-static int rm(Path path);
+static int rm(char path[1024]);
 static char *strtolower(char *s, char *str, size_t size);
-static char *expandtilde(Path dest, Path src, int l);
+static char *expandtilde(char dest[1024], char src[1024], int l);
 static char *strncomb(char *s, size_t n, ...);
 static char *stripnewline(char *s);
-static FILE *loadconfig(Path file);
+static FILE *loadconfig(char file[1024]);
 static void version();
+void fullpath(char p[1024]);
 static void usage();
 static void help();
 
 int main(int argc, char **argv);
 
-Path configpath;
+char configpath[1024];
 int isinstall, isforce;
 int symlinkstarted, installstarted;
 int nfailedsymlinks, ninstallscripts, nsymlinks;
+
+void
+fullpath(char p[1024])
+{
+	char cwd[1024];
+	getcwd(cwd, sizeof(cwd));
+	strncomb(p, sizeof(cwd), cwd, "/", p, NULL);
+}
 
 static int
 expandhostname(char *s)
@@ -153,9 +161,9 @@ parseerror(Tokens tokens, int ntokens, int l)
 
 /* link all files within a directory src to another directory dest as hidden files */
 static int
-linkfiles(Path dest, Path src)
+linkfiles(char dest[1024], char src[1024])
 {
-	Path dest_filename, src_filename, cwd;
+	char dest_filename[1024], src_filename[1024], cwd[1024];
 
 	struct dirent *entry;
 	DIR *src_dir;
@@ -175,14 +183,13 @@ linkfiles(Path dest, Path src)
 
 	while ((entry = readdir(src_dir)) != NULL) {
 		if (!DODD(entry->d_name)) {
-			getcwd(cwd, sizeof(Path));
+			getcwd(cwd, sizeof(cwd));
 
-			memset(dest_filename, 0, sizeof(Path));
-			memset(src_filename, 0, sizeof(Path));
+			*dest_filename = *src_filename = '\0';
 
-			strncomb(dest_filename, sizeof(Path),
-				dest, "", entry->d_name, NULL);
-			strncomb(src_filename, sizeof(Path),
+			strncomb(dest_filename, sizeof(dest_filename),
+				dest, entry->d_name, NULL);
+			strncomb(src_filename, sizeof(src_filename),
 				cwd, "/", src, "/", entry->d_name, NULL);
 
 			rm(dest_filename);
@@ -208,7 +215,7 @@ static int
 install(Tokens tokens, int t)
 {
 	Command cmd;
-	Path cwd;
+	char cwd[1024];
 	int i;
 
 	printf("\n");
@@ -221,12 +228,13 @@ install(Tokens tokens, int t)
 		printf(":: beginning execution of installation scripts\n\n");
 	}
 
-	getcwd(cwd, sizeof(Path));
-	strncomb(cmd, sizeof(Path), cwd, "/install/", NULL);
+	getcwd(cwd, sizeof(cwd));
+	strncomb(cmd, sizeof(cwd), cwd, "/install/", NULL);
 
 	for (i = 1; i < t; i++) {
 		strncomb(cmd, sizeof(Command), tokens[i], " ", NULL);
 	}
+
 	printf("    installing %s %s\n", tokens[1], *(tokens + 2));
 	if (confirm("\n:: continue with installation", NULL)) {
 		system(cmd);
@@ -238,17 +246,14 @@ install(Tokens tokens, int t)
 }
 
 static int
-linkdir(Path dest, Path src)
+linkdir(char dest[1024], char src[1024])
 {
-	Path dest_dir;
-	Path src_dir;
-	Path cwd;
+	char dest_dir[1024], src_dir[1024], cwd[1024];
 	char *s;
 
 	expandhostname(src);
 
-	memset(dest_dir, 0, sizeof(Path));
-	memset(src_dir, 0, sizeof(Path));
+	*dest_dir = *src_dir = '\0';
 
 	if (!symlinkstarted) {
 		symlinkstarted = 1;
@@ -260,15 +265,15 @@ linkdir(Path dest, Path src)
 		return -1;
 	}
 
-	getcwd(cwd, sizeof(Path));
+	getcwd(cwd, sizeof(cwd));
 
-	strncomb(src_dir, sizeof(Path), cwd, "/", src, NULL);
+	strncomb(src_dir, sizeof(src_dir), cwd, "/", src, NULL);
 
 	if ((s = strstr(src, ":")) != NULL) {
 		*s = '\0';
 	}
 
-	strncomb(dest_dir, sizeof(Path), dest, "/", src, NULL);
+	strncomb(dest_dir, sizeof(dest_dir), dest, "/", src, NULL);
 
 	rm(dest_dir);
 
@@ -303,7 +308,7 @@ strncomb(char *s, size_t n, ...)
 }
 
 static int
-rm(Path path)
+rm(char path[1024])
 {
 	struct stat path_stat;
 	int is_dir;
@@ -322,8 +327,8 @@ rm(Path path)
 		}
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (!DODD(entry->d_name)) {
-				Path new_path;
-				strncomb(new_path, sizeof(Path) - 1,
+				char new_path[1024];
+				strncomb(new_path, sizeof(new_path) - 1,
 					path, "/", entry->d_name, NULL);
 				rm(new_path);
 			}
@@ -371,7 +376,7 @@ help()
 }
 
 static FILE *
-loadconfig(Path path)
+loadconfig(char path[1024])
 {
 	if (!access(path, F_OK)) {
 		FILE *fd;
@@ -390,7 +395,7 @@ sh(Tokens tokens, int t)
 	Command cmd;
 	int i;
 
-	memset(cmd, 0, sizeof(Command));
+	*cmd = '\0';
 	for (i = 1; i < t; i++) {
 		strncomb(cmd, sizeof(Command), tokens[i], " ", NULL);
 	}
@@ -400,7 +405,7 @@ sh(Tokens tokens, int t)
 }
 
 static char *
-expandtilde(Path dest, Path src, int size)
+expandtilde(char dest[1024], char src[1024], int size)
 {
 	int len;
 	char *tmp;
@@ -408,7 +413,7 @@ expandtilde(Path dest, Path src, int size)
 	len = strlen(src);
 	tmp = calloc(len + 1, 1);
 
-	memset(dest, 0, size);
+	*dest = '\0';
 	strncpy(tmp, src, len);
 	memmove(tmp, tmp + 1, len); /* copy all but first char of tmp */
 	strncomb(dest, size - 1, getenv("HOME"), tmp, NULL);
@@ -429,7 +434,7 @@ readconfig(FILE *config)
 {
 	Tokens tokens;
 	char line_buffer[LINEBUFSIZE];
-	Path exppath;
+	char exppath[1024];
 	int ntokens;
 	char *token;
 	int l;
@@ -471,9 +476,6 @@ readconfig(FILE *config)
 			parseerror(tokens, ntokens, l);
 		}
 		l++;
-
-		memset(tokens, 0, sizeof(Tokens));
-		memset(line_buffer, 0, LINEBUFSIZE);
 	}
 	return 0;
 }
@@ -484,7 +486,6 @@ main(int argc, char *argv[])
 	FILE *config;
 	int option;
 
-	memset(configpath, 0, sizeof(Path));
 	strcpy(configpath, "econf");
 
 	while ((option = getopt(argc, argv, "fvhiC:c:")) != -1) {
@@ -504,7 +505,6 @@ main(int argc, char *argv[])
 			isinstall = 1;
 			break;
 		case 'c':
-			memset(configpath, 0, sizeof(Path));
 			strcpy(configpath, optarg);
 			break;
 		case 'C':
