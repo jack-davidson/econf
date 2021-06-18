@@ -267,6 +267,9 @@ linkdir(char dest[1024], char src[1024])
 
 	snprintf(src_dir, sizeof(src_dir), "%s/%s", cwd, src);
 
+	/* Terminate at location of ':host' after src_dir, dest_dir only
+	 * needs '<THIS>:host' part of '.*:host' (aka, the name of
+	 * the program without the hostname postfix).  */
 	if (s != NULL)
 		*s = '\0';
 
