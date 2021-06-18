@@ -33,26 +33,24 @@ typedef	char Tokens[TOKENLEN][TOKENBUFSIZE];
 typedef char Token[TOKENBUFSIZE];
 typedef char Command[COMMANDBUFSIZE];
 
+static char *expandhostname(char *s);
 static int confirm(char *confirm_message, char *item);
 static int parseline(Tokens tokens, int ntokens, int l);
+static int parseerror(Tokens tokens, int ntokens, int l);
 static int linkfiles(char dest[1024], char src[1024]);
 static int install(Tokens tokens, int t);
 static int linkdir(char dest[1024], char src[1024]);
-static int parseerror(Tokens tokens, int ntokens, int l);
-static char *expandhostname(char *s);
-static int readconfig(FILE *config);
-static int sh(Tokens tokens, int t);
 static int rm(char path[1024]);
-static char *strtolower(char *s, char *str, size_t size);
-static char *expandtilde(char dest[1024], char src[1024], int l);
-static char *strncomb(char *s, size_t n, ...);
-static char *stripnewline(char *s);
-static FILE *loadconfig(char file[1024]);
-static void version();
 static void usage();
+static void version();
+static char *strtolower(char *s, char *str, size_t size);
 static void help();
-
-int main(int argc, char **argv);
+static FILE *loadconfig(char path[1024]);
+static int sh(Tokens tokens, int t);
+static char *expandtilde(char dest[1024], char src[1024], int size);
+static char *stripnewline(char *s);
+static int readconfig(FILE *config);
+int main(int argc, char *argv[]);
 
 char configpath[1024];
 int isinstall, isforce;
@@ -64,13 +62,19 @@ int nfailedsymlinks, ninstallscripts, nsymlinks;
 static char *
 expandhostname(char *s)
 {
-	char *p;
+	char *p, *e;
 
 	if ((p = strstr(s, ":host")) != NULL) {
 		char hostname[HOSTNAMEBUFSIZE];
-		s[strcspn(s, ":")] = '\0';
+
+		e = s;
+		while (*e != ':') {
+			++e;
+		}
+		*(++e) = '\0';
+
 		gethostname(hostname, HOSTNAMEBUFSIZE);
-		strncomb(s, sizeof(Token), ":", hostname, NULL);
+		strncat(s, hostname, 64);
 		return p;
 	}
 	return NULL;
@@ -208,7 +212,7 @@ linkfiles(char dest[1024], char src[1024])
 static int
 install(Tokens tokens, int t)
 {
-	Command cmd;
+	char cmd[4096];
 	char cwd[1024];
 	int i;
 
@@ -223,10 +227,10 @@ install(Tokens tokens, int t)
 	}
 
 	getcwd(cwd, sizeof(cwd));
-	strncomb(cmd, sizeof(cwd), cwd, "/install/", NULL);
+	snprintf(cmd, sizeof(cmd), "%s/install/", cwd);
 
 	for (i = 1; i < t; i++) {
-		strncomb(cmd, sizeof(Command), tokens[i], " ", NULL);
+		snprintf(cmd, sizeof(cmd), tokens[i], " ", NULL);
 	}
 
 	printf("    installing %s %s\n", tokens[1], *(tokens + 2));
@@ -281,23 +285,6 @@ linkdir(char dest[1024], char src[1024])
 	return 0;
 }
 
-static char *
-strncomb(char *s, size_t n, ...)
-{
-	va_list args;
-	char *arg;
-
-	va_start(args, n);
-	arg = va_arg(args, char *);
-
-	while (arg != (char *)NULL) {
-		strncat(s, arg, n);
-		arg = va_arg(args, char *);
-	}
-	va_end(args);
-	return s;
-}
-
 static int
 rm(char path[1024])
 {
@@ -320,8 +307,7 @@ rm(char path[1024])
 		while ((entry = readdir(src_dir)) != NULL) {
 			if (!DODD(entry->d_name)) {
 				*new_path = '\0';
-				strncomb(new_path, sizeof(new_path) - 1,
-					path, "/", entry->d_name, NULL);
+				snprintf(new_path, sizeof(new_path), "%s/%s", path, entry->d_name);
 				rm(new_path);
 			}
 		}
@@ -384,12 +370,12 @@ loadconfig(char path[1024])
 static int
 sh(Tokens tokens, int t)
 {
-	Command cmd;
+	char cmd[4096];
 	int i;
 
 	*cmd = '\0';
 	for (i = 1; i < t; i++) {
-		strncomb(cmd, sizeof(Command), tokens[i], " ", NULL);
+		snprintf(cmd, sizeof(cmd), "%s ", tokens[i]);
 	}
 
 	system(cmd);
@@ -402,13 +388,18 @@ expandtilde(char dest[1024], char src[1024], int size)
 	int len;
 	char *tmp;
 
+	/* This section can be optimized by instead of
+	 * allocating and memmoving, we can modify the
+	 * location of the string terminator and increment the
+	 * char pointer.  */
+
 	len = strlen(src);
 	tmp = calloc(len + 1, 1);
 
 	*dest = '\0';
 	strncpy(tmp, src, len);
 	memmove(tmp, tmp + 1, len); /* copy all but first char of tmp */
-	strncomb(dest, size - 1, getenv("HOME"), tmp, NULL);
+	snprintf(dest, size, "%s%s", getenv("HOME"), tmp);
 
 	free(tmp);
 	return dest;
@@ -417,7 +408,13 @@ expandtilde(char dest[1024], char src[1024], int size)
 static char *
 stripnewline(char *s)
 {
-	s[strcspn(s, "\n")] = 0;
+	char *p;
+
+	p = s;
+	while (*p != '\n') {
+		++p;
+	}
+	*p = '\0';
 	return s;
 }
 
