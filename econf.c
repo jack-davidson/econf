@@ -104,10 +104,11 @@ parseline(Tokens tokens, int ntokens, int l)
 			return 0;
 		}
 	} if (ntokens == 3) {
-		if (!strcmp(tokens[0], "dir"))
-			return linkdir(tokens[2], tokens[1]);
-		else if (!strcmp(tokens[0], "files"))
+		if (!strcmp(tokens[0], "files"))
 			return linkfiles(tokens[2], tokens[1]);
+		else if (!strcmp(tokens[0], "dir")) {
+			return linkdir(tokens[2], tokens[1]);
+		}
 	} if (!strcmp(tokens[0], "sh"))
 		return sh(tokens, ntokens);
 	if (!strcmp(tokens[0], "install"))
@@ -145,6 +146,14 @@ linkfiles(Path dest, Path src)
 
 	struct dirent *entry;
 	DIR *src_dir;
+
+	/* expand :host to : + hostname */
+	if (strstr(src, ":host") != NULL) {
+		char hostname[HOSTNAMEBUFSIZE];
+		src[strcspn(src, ":")] = '\0';
+		gethostname(hostname, HOSTNAMEBUFSIZE);
+		strncomb(src, sizeof(Token), ":", hostname, NULL);
+	}
 
 	if (!symlinkstarted) {
 		symlinkstarted = 1;
@@ -227,6 +236,7 @@ linkdir(Path dest, Path src)
 	Path dest_dir;
 	Path src_dir;
 	Path cwd;
+	char *s;
 
 	memset(dest_dir, 0, sizeof(Path));
 	memset(src_dir, 0, sizeof(Path));
@@ -244,6 +254,12 @@ linkdir(Path dest, Path src)
 	getcwd(cwd, sizeof(Path));
 
 	strncomb(src_dir, sizeof(Path), cwd, "/", src, NULL);
+
+	if ((s = strstr(src, ":")) != NULL) {
+		printf("%s\n", s);
+		*s = '\0';
+	}
+
 	strncomb(dest_dir, sizeof(Path), dest, "/", src, NULL);
 
 	rm(dest_dir);
@@ -435,15 +451,6 @@ readconfig(FILE *config)
 			case '#':
 				break;
 			default:
-				strncpy(tokens[ntokens], token, sizeof(Token));
-			}
-
-			/* expand :host to : + hostname */
-			if (strstr(token, ":host") != NULL) {
-				char hostname[HOSTNAMEBUFSIZE];
-				token[strcspn(token, ":")] = '\0';
-				gethostname(hostname, HOSTNAMEBUFSIZE);
-				strncomb(token, sizeof(Token), ":", hostname, NULL);
 				strncpy(tokens[ntokens], token, sizeof(Token));
 			}
 
