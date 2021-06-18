@@ -40,6 +40,7 @@ static int linkfiles(Path dest, Path src);
 static int install(Tokens tokens, int t);
 static int linkdir(Path dest, Path src);
 static int parseerror(Tokens tokens, int ntokens, int l);
+static int expandhostname(char *s);
 static int readconfig(FILE *config);
 static int sh(Tokens tokens, int t);
 static int rm(Path path);
@@ -58,6 +59,18 @@ Path configpath;
 int isinstall, isforce;
 int symlinkstarted, installstarted;
 int nfailedsymlinks, ninstallscripts, nsymlinks;
+
+static int
+expandhostname(char *s)
+{
+	if (strstr(s, ":host") != NULL) {
+		char hostname[HOSTNAMEBUFSIZE];
+		s[strcspn(s, ":")] = '\0';
+		gethostname(hostname, HOSTNAMEBUFSIZE);
+		strncomb(s, sizeof(Token), ":", hostname, NULL);
+	}
+	return 0;
+}
 
 static int
 confirm(char *confirm_message, char *item)
@@ -147,13 +160,7 @@ linkfiles(Path dest, Path src)
 	struct dirent *entry;
 	DIR *src_dir;
 
-	/* expand :host to : + hostname */
-	if (strstr(src, ":host") != NULL) {
-		char hostname[HOSTNAMEBUFSIZE];
-		src[strcspn(src, ":")] = '\0';
-		gethostname(hostname, HOSTNAMEBUFSIZE);
-		strncomb(src, sizeof(Token), ":", hostname, NULL);
-	}
+	expandhostname(src);
 
 	if (!symlinkstarted) {
 		symlinkstarted = 1;
@@ -238,6 +245,8 @@ linkdir(Path dest, Path src)
 	Path cwd;
 	char *s;
 
+	expandhostname(src);
+
 	memset(dest_dir, 0, sizeof(Path));
 	memset(src_dir, 0, sizeof(Path));
 
@@ -256,7 +265,6 @@ linkdir(Path dest, Path src)
 	strncomb(src_dir, sizeof(Path), cwd, "/", src, NULL);
 
 	if ((s = strstr(src, ":")) != NULL) {
-		printf("%s\n", s);
 		*s = '\0';
 	}
 
