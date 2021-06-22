@@ -31,7 +31,6 @@
 
 typedef	char Tokens[TOKENLEN][TOKENBUFSIZE];
 typedef char Token[TOKENBUFSIZE];
-typedef char Command[COMMANDBUFSIZE];
 
 static char *expandhostname(char *s);
 static int confirm(char *confirm_message, char *item);
