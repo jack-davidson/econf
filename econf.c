@@ -377,7 +377,7 @@ sh(Tokens tokens, int t)
 	char cmd[4096];
 	int i;
 
-	fprintf(stderr, "Warning: the sh directive is deprecated and no loger necessary,\n"
+	fprintf(stderr, "Warning: the sh directive is deprecated and no longer necessary,\n"
 			"please consider updating your config to the latest standard.\n");
 
 	*cmd = '\0';
