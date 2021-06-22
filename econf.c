@@ -68,9 +68,9 @@ expandhostname(char *s)
 
 		e = s;
 		while (*e != ':') {
-			++e;
+			e++;
 		}
-		*(++e) = '\0';
+		*(e + 1) = '\0';
 
 		gethostname(hostname, HOSTNAMEBUFSIZE);
 		strncat(s, hostname, 64);
@@ -142,7 +142,7 @@ parseerror(Tokens tokens, int ntokens, int l)
 	f = isforce;
 	isforce = 0;
 
-	printf("failed to parse line %i:\n\tunrecognized tokens: \"", l);
+	printf("Error: failed to parse line %i:\n\tunrecognized tokens: \"", l);
 	for (i = 0; i < ntokens; i++) {
 		printf("%s ", tokens[i]);
 	}
@@ -196,7 +196,7 @@ linkfiles(char dest[1024], char src[1024])
 				nsymlinks++;
 			} else {
 				fprintf(stderr,
-					"\tsymlink failed: %s -> %s\n",
+					"\tError: symlink failed: %s -> %s\n",
 					src_filename, dest_filename);
 				nfailedsymlinks++;
 			}
@@ -282,7 +282,7 @@ linkdir(char dest[1024], char src[1024])
 		fprintf(stdout, "\tsymlinking %s -> %s\n", src_dir, dest_dir);
 		nsymlinks++;
 	} else {
-		fprintf(stderr, "\tsymlink failed: %s -> %s\n", src_dir, dest_dir);
+		fprintf(stderr, "\tError: symlink failed: %s -> %s\n", src_dir, dest_dir);
 		nfailedsymlinks++;
 	}
 
@@ -365,7 +365,7 @@ loadconfig(char path[1024])
 		fd = fopen(path, "r");
 		return fd;
 	} else {
-		fprintf(stdout, "failed to load config file\n");
+		fprintf(stdout, "Error: failed to load config file\n");
 		usage();
 		return NULL;
 	}
@@ -377,9 +377,13 @@ sh(Tokens tokens, int t)
 	char cmd[4096];
 	int i;
 
+	fprintf(stderr, "Warning: the sh directive is deprecated and no loger necessary,\n"
+			"please consider updating your config to the latest standard.\n");
+
 	*cmd = '\0';
 	for (i = 1; i < t; i++) {
-		snprintf(cmd, sizeof(cmd), "%s ", tokens[i]);
+		strcat(cmd, tokens[i]);
+		strcat(cmd, " ");
 	}
 
 	system(cmd);
@@ -389,7 +393,7 @@ sh(Tokens tokens, int t)
 static char *
 expandtilde(char dest[1024], char src[1024], int size)
 {
-	snprintf(dest, size, "%s%s", getenv("HOME"), ++src);
+	snprintf(dest, size, "%s%s", getenv("HOME"), (src + 1));
 	return dest;
 }
 
@@ -400,9 +404,10 @@ stripnewline(char *s)
 
 	p = s;
 	while (*p != '\n') {
-		++p;
+		p++;
 	}
 	*p = '\0';
+
 	return s;
 }
 
