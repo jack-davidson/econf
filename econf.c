@@ -229,7 +229,9 @@ install(Tokens tokens, int t)
 	snprintf(cmd, sizeof(cmd), "%s/install/", cwd);
 
 	for (i = 1; i < t; i++) {
-		snprintf(cmd, sizeof(cmd), tokens[i], " ", NULL);
+		strcat(cmd, tokens[i]);
+		strcat(cmd, " ");
+		printf("%s\n", cmd);
 	}
 
 	printf("    installing %s %s\n", tokens[1], *(tokens + 2));
