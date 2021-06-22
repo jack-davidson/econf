@@ -61,10 +61,11 @@ int nfailedsymlinks, ninstallscripts, nsymlinks;
 static char *
 expandhostname(char *s)
 {
-	char *p, *e;
+	char *p;
 
 	if ((p = strstr(s, ":host")) != NULL) {
 		char hostname[HOSTNAMEBUFSIZE];
+		char *e;
 
 		e = s;
 		while (*e != ':') {
