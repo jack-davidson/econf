@@ -7,6 +7,12 @@ usage
 Receive help for econf with
 `econf -h`
 
+todo
+====
+- modify install() such that if the first argument
+    is the name of a directory, run all scripts
+    in said directory.
+
 configuration
 =============
 Econf reads a configuration file called `econf` in your configuration repository.
