@@ -42,7 +42,7 @@ static int linkdir(char dest[1024], char src[1024]);
 static int rm(char path[1024]);
 static void usage();
 static void version();
-static char *strtolower(char *s, char *str, size_t size);
+/* static char *strtolower(char *s, char *str, size_t size); */
 static void help();
 static FILE *loadconfig(char path[1024]);
 static int sh(Tokens tokens, int t);
@@ -81,30 +81,31 @@ expandhostname(char *s)
 	return NULL;
 }
 
+/* Confirm action with user: if input starts
+ * with n/N, return false, otherwise return true.  */
 static int
 confirm(char *confirm_message, char *item)
 {
-	char confirm[10];
-	char *message_format;
+	char input_buffer[10];
+	char message_format[16];
 
 	if (isforce)
 		return 1;
 
+	*message_format = '\0';
+
+	strcat(message_format, "%s");
 	if (item == NULL) {
-		message_format = malloc(11);
-		strcpy(message_format, "%s?");
+		strcat(message_format, "?");
 	} else {
-		message_format = malloc(14);
-		strcpy(message_format, "%s %s?");
+		strcat(message_format, " %s?");
 	}
 
 	strcat(message_format, " [Y/n] ");
 	printf(message_format, confirm_message, item);
-	free(message_format);
-	fgets(confirm, 10, stdin);
-	strtolower(confirm, confirm, sizeof(confirm));
+	fgets(input_buffer, 10, stdin);
 
-	if (confirm[0] == 'n') {
+	if (tolower(*input_buffer) == 'n') {
 		return 0;
 	} else {
 		return 1;
@@ -335,6 +336,7 @@ version()
 	fprintf(stdout, "econf-"VERSION"\n");
 }
 
+/* UNUSED
 static char *
 strtolower(char *s, char *str, size_t size)
 {
@@ -344,6 +346,7 @@ strtolower(char *s, char *str, size_t size)
 	}
 	return s;
 }
+*/
 
 static void
 help()
