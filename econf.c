@@ -49,6 +49,7 @@ static int sh(Tokens tokens, int t);
 static char *expandtilde(char dest[1024], char src[1024], int size);
 static char *stripnewline(char *s);
 static int readconfig(FILE *config);
+static int die(char *msg, int success, void (*cb)());
 int main(int argc, char *argv[]);
 
 char configpath[1024];
@@ -463,6 +464,14 @@ readconfig(FILE *config)
 	return 0;
 }
 
+static int
+die(char *msg, int success, void (*cb)())
+{
+	if (msg != NULL) printf("%s\n", msg);
+	if (cb != NULL) cb(msg);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -477,12 +486,10 @@ main(int argc, char *argv[])
 			isforce = 1;
 			break;
 		case 'v':
-			version();
-			exit(0);
+			die(NULL, 0, version);
 			break;
 		case 'h':
-			help();
-			exit(0);
+			die(NULL, 0, help);
 			break;
 		case 'i':
 			isinstall = 1;
