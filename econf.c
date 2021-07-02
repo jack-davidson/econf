@@ -469,7 +469,7 @@ die(char *msg, int success, void (*cb)())
 {
 	if (msg != NULL) printf("%s\n", msg);
 	if (cb != NULL) cb(msg);
-	exit(1);
+	exit(success);
 }
 
 int
