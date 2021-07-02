@@ -151,7 +151,7 @@ parseerror(Tokens tokens, int ntokens, int l)
 	printf("\"\n");
 
 	if (!confirm("\ncontinue with error", NULL))
-		exit(1);
+		die(NULL, 1, NULL);
 
 	printf("\n");
 
