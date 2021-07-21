@@ -336,18 +336,6 @@ version()
 	fprintf(stdout, "econf-"VERSION"\n");
 }
 
-/* UNUSED
-static char *
-strtolower(char *s, char *str, size_t size)
-{
-	int i;
-	for (i = 0; i < size; i++) {
-		s[i] = tolower(s[i]);
-	}
-	return s;
-}
-*/
-
 static void
 help()
 {
