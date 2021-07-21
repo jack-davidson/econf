@@ -42,7 +42,6 @@ static int linkdir(char dest[1024], char src[1024]);
 static int rm(char path[1024]);
 static void usage();
 static void version();
-/* static char *strtolower(char *s, char *str, size_t size); */
 static void help();
 static FILE *loadconfig(char path[1024]);
 static int sh(Tokens tokens, int t);
@@ -500,9 +499,10 @@ main(int argc, char *argv[])
 
 	readconfig(config);
 
-	printf("\n:: symlinked %i objs\n", nsymlinks);
-	printf(":: installed %i scripts\n", ninstallscripts);
-	printf(":: completed installation with %i failed symlinks\n", nfailedsymlinks);
+	printf("\n:: symlinked %i objs\n"
+	         ":: installed %i scripts\n"
+		 ":: completed installation with %i failed symlinks",
+		 nsymlinks, ninstallscripts, nfailedsymlinks);
 
 	fclose(config);
 	return 0;
