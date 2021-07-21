@@ -300,9 +300,8 @@ rm(char path[1024])
 	int is_dir;
 
 	lstat(path, &path_stat);
-	is_dir = S_ISDIR(path_stat.st_mode);
 
-	if (is_dir) {
+	if (S_ISDIR(path_stat.st_mode)) {
 		struct dirent *entry;
 		DIR *src_dir;
 
